@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>เข้าสู่ระบบ · KhunOwl</title>
+<link rel="icon" type="image/png" href="assets/khunowl-favicon.png" />
+<link rel="apple-touch-icon" href="assets/khunowl-apple-touch.png" />
+<meta name="theme-color" content="#1C1F2B" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --ink:#1B1E26;--ink-soft:#6E7278;--ink-faint:#A4A8AD;--line:#ECEAE6;
+  --panel:#FFFFFF;--panel-2:#F4F3F1;--bg:#F7F6F4;--sidebar:#1C1F2B;
+  --accent:#F2658A;--accent-deep:#E0456F;--accent-2:#FF8A63;
+  --hero:linear-gradient(120deg,#FF8A63 0%,#F2658A 55%,#EE4E97 100%);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);font-family:'Anuphan',system-ui,sans-serif;color:var(--ink)}
+.wrap{display:flex;min-height:100vh}
+/* ── Left: animated greeting panel ───────────────────── */
+.panel{flex:1.1;position:relative;background:var(--sidebar);color:#fff;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;padding:44px 48px;min-width:0}
+.orb{position:absolute;border-radius:50%;filter:blur(60px);opacity:.55;animation:float 16s ease-in-out infinite}
+.orb1{width:420px;height:420px;background:var(--accent-2);top:-140px;left:-100px;animation-delay:0s}
+.orb2{width:360px;height:360px;background:var(--accent);bottom:-140px;right:-80px;animation-delay:-6s}
+.orb3{width:260px;height:260px;background:#7C6CF0;top:38%;left:52%;animation-delay:-11s;opacity:.35}
+@keyframes float{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(30px,-24px) scale(1.06)}66%{transform:translate(-22px,18px) scale(0.96)}}
+.brand{display:flex;align-items:center;gap:12px;font-weight:700;font-size:18px;position:relative;z-index:2}
+.brand .dot{width:30px;height:30px;border-radius:11px;background:var(--hero);flex-shrink:0}
+.greet{position:relative;z-index:2;max-width:520px}
+.gtime{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.6);opacity:0;animation:rise .6s ease forwards;animation-delay:.15s}
+.gname{font-size:clamp(30px,4.4vw,50px);font-weight:600;line-height:1.18;margin:10px 0 6px;letter-spacing:-.01em}
+.gname .cursor{display:inline-block;width:3px;height:.85em;background:var(--accent-2);margin-left:3px;vertical-align:-0.1em;animation:blink 1s step-end infinite}
+.gq{font-size:clamp(18px,2.4vw,25px);color:rgba(255,255,255,.75);font-weight:400;opacity:0;animation:rise .6s ease forwards}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes blink{50%{opacity:0}}
+.chips{position:relative;z-index:2;display:flex;gap:10px;flex-wrap:wrap;margin-top:28px}
+.chip{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:8px 15px;font-size:12.5px;color:rgba(255,255,255,.85);display:flex;align-items:center;gap:7px;opacity:0;animation:rise .5s ease forwards}
+.chip i{width:6px;height:6px;border-radius:9px;flex-shrink:0}
+.foot{position:relative;z-index:2;font-size:12px;color:rgba(255,255,255,.45)}
+/* ── Right: form ──────────────────────────────────────── */
+.side{flex:1;display:flex;align-items:center;justify-content:center;padding:40px 32px;min-width:0}
+.card{width:100%;max-width:380px}
+.card h1{font-size:25px;font-weight:600;margin:0 0 6px;letter-spacing:-.01em}
+.card p.sub{margin:0 0 30px;color:var(--ink-soft);font-size:14.5px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:12.5px;color:var(--ink-soft);margin-bottom:6px}
+.field input{width:100%;border:none;border-radius:13px;padding:13px 15px;font-family:inherit;font-size:15px;background:var(--panel-2);color:var(--ink);outline:none;transition:box-shadow .15s}
+.field input:focus{box-shadow:0 0 0 2px var(--accent)}
+.row-between{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;font-size:13px}
+.row-between label{display:flex;align-items:center;gap:7px;color:var(--ink-soft);cursor:pointer}
+.row-between a{color:var(--accent-deep);text-decoration:none}
+.row-between a:hover{color:var(--accent)}
+.btn-login{width:100%;border:none;border-radius:999px;padding:15px;font-family:inherit;font-size:15.5px;font-weight:600;color:#fff;background:var(--hero);cursor:pointer;box-shadow:0 10px 24px rgba(238,78,151,.28);transition:transform .15s,box-shadow .15s;position:relative;overflow:hidden}
+.btn-login:active{transform:scale(.98)}
+.btn-login.loading{cursor:default}
+.btn-login .txt{transition:opacity .2s}
+.btn-login.loading .txt{opacity:0}
+.spin{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s}
+.btn-login.loading .spin{opacity:1}
+.spin i{width:18px;height:18px;border:2.5px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.or{display:flex;align-items:center;gap:12px;margin:24px 0;color:var(--ink-faint);font-size:12.5px}
+.or:before,.or:after{content:'';flex:1;height:1px;background:var(--line)}
+.btn-alt{width:100%;border:1.5px solid var(--line);background:var(--panel);border-radius:999px;padding:13px;font-family:inherit;font-size:14.5px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;color:var(--ink);margin-bottom:10px;transition:background .15s}
+.btn-alt:hover{background:var(--panel-2)}
+.signup{text-align:center;margin-top:26px;font-size:13.5px;color:var(--ink-soft)}
+.signup a{color:var(--accent-deep);font-weight:500;text-decoration:none}
+/* success transition */
+.card.done .form-body{display:none}
+.success{display:none;text-align:center;padding:20px 0}
+.card.done .success{display:block;animation:rise .5s ease}
+.ring{width:64px;height:64px;border-radius:50%;background:var(--hero);display:flex;align-items:center;justify-content:center;margin:0 auto 18px;animation:pop .5s cubic-bezier(.2,.9,.25,1)}
+@keyframes pop{0%{transform:scale(.5);opacity:0}60%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
+@media (max-width:860px){.panel{display:none}.side{padding:32px 20px}}
+.brand-icon{width:34px;height:34px;border-radius:10px;display:block;flex-shrink:0;box-shadow:0 6px 16px rgba(238,78,151,.35)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section class="panel">
+    <div class="orb orb1"></div><div class="orb orb2"></div><div class="orb orb3"></div>
+    <div class="brand"><img class="brand-icon" src="assets/khunowl-icon.png" alt="" />KhunOwl</div>
+    <div class="greet">
+      <div class="gtime">20 กันยายน 2026 · 14:32</div>
+      <div class="gname">สวัสดีตอนบ่าย<br /><span id="typedName"></span><span class="cursor" id="curs"></span></div>
+      <div class="gq" id="gq" style="animation-delay:2.1s">วันนี้มีงานอะไรบ้าง?</div>
+    </div>
+    <div class="chips">
+      <div class="chip" style="animation-delay:2.5s"><i style="background:#FF8A63"></i>3 บิลใกล้ครบกำหนด</div>
+      <div class="chip" style="animation-delay:2.65s"><i style="background:#F2658A"></i>เช็กระยะรถอีก 2,550 กม.</div>
+      <div class="chip" style="animation-delay:2.8s"><i style="background:#8FD3B6"></i>ทริปญี่ปุ่นอีก 25 วัน</div>
+    </div>
+    <div class="foot">ข้อมูลการเงิน ทรัพย์สิน รถ และบ้านของคุณ ในที่เดียว</div>
+  </section>
+
+  <section class="side">
+    <div class="card" id="card">
+      <div class="form-body">
+        <h1>เข้าสู่ระบบ</h1>
+        <p class="sub">กลับมาดูภาพรวมชีวิตของคุณกันต่อ</p>
+        <form id="loginForm">
+          <div class="field"><label>อีเมล</label><input type="email" placeholder="you@email.com" defaultValue="" required /></div>
+          <div class="field"><label>รหัสผ่าน</label><input type="password" placeholder="••••••••" required /></div>
+          <div class="row-between">
+            <label><input type="checkbox" style="accent-color:#F2658A" />จำฉันไว้ในระบบ</label>
+            <a href="#">ลืมรหัสผ่าน?</a>
+          </div>
+          <button type="submit" class="btn-login" id="loginBtn"><span class="txt">เข้าสู่ระบบ</span><span class="spin"><i></i></span></button>
+        </form>
+        <div class="or">หรือ</div>
+        <button class="btn-alt">เข้าสู่ระบบด้วย Google</button>
+        <div class="signup">ยังไม่มีบัญชี? <a href="#">สร้างบัญชีใหม่</a></div>
+      </div>
+      <div class="success">
+        <div class="ring"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9 18 20 6" /></svg></div>
+        <h1 style="text-align:center">เข้าสู่ระบบสำเร็จ</h1>
+        <p class="sub" style="text-align:center">กำลังพาไปที่หน้าภาพรวม...</p>
+      </div>
+    </div>
+  </section>
+</div>
+<script>
+const name = "มฆวัต ปิ่นสุวรรณ,";
+const target = document.getElementById('typedName');
+let i = 0;
+function type(){
+  if (i <= name.length) { target.textContent = name.slice(0, i); i++; setTimeout(type, 55); }
+  else { document.getElementById('curs').style.display = 'none'; }
+}
+setTimeout(type, 550);
+
+document.getElementById('loginForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('loginBtn');
+  btn.classList.add('loading');
+  setTimeout(() => { document.getElementById('card').classList.add('done'); }, 900);
+});
+</script>
+</body>
+</html>
