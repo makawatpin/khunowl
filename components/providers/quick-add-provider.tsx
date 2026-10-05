@@ -11,11 +11,10 @@ const SubscriptionForm = dynamic(() => import("@/components/forms/subscription-f
 const AssetForm = dynamic(() => import("@/components/forms/asset-form").then((m) => m.AssetForm), { ssr: false });
 const DocumentForm = dynamic(() => import("@/components/forms/document-form").then((m) => m.DocumentForm), { ssr: false });
 const FuelLogForm = dynamic(() => import("@/components/forms/fuel-log-form").then((m) => m.FuelLogForm), { ssr: false });
-const VehicleServiceForm =dynamic(() => import("@/components/forms/vehicle-service-form").then((m) => m.VehicleServiceForm), { ssr: false });
+const VehicleServiceForm = dynamic(() => import("@/components/forms/vehicle-service-form").then((m) => m.VehicleServiceForm), { ssr: false });
 const TripForm = dynamic(() => import("@/components/forms/trip-form").then((m) => m.TripForm), { ssr: false });
 const SlipImportForm = dynamic(() => import("@/components/forms/slip-import-form").then((m) => m.SlipImportForm), { ssr: false });
-import type { VehiclePickItem } from "@/components/forms/fuel-log-form";
-import type { TripPerson } from "@/components/ui/avatar";
+import { getQuickAddOptions, type QuickAddOptions } from "@/lib/actions/quick-add";
 
 export type QuickAddKind = "expense" | "income" | "transfer" | "bill" | "sub" | "asset" | "doc" | "fuel" | "service" | "trip" | "slips";
 
@@ -33,28 +32,22 @@ const KIND_META: { kind: QuickAddKind; label: string; icon: IconName }[] = [
   { kind: "doc", label: "เอกสาร", icon: "doc" },
 ];
 
-type RefOption = { id: string; name: string };
+const NO_OPTIONS: QuickAddOptions = { accounts: [], cards: [], vehicles: [], friends: [] };
 
 const QuickAddContext = createContext<{ open: (kind?: QuickAddKind) => void } | null>(null);
 
-export function QuickAddProvider({
-  accounts,
-  cards,
-  vehicles,
-  friends,
-  children,
-}: {
-  accounts: RefOption[];
-  cards: RefOption[];
-  vehicles: VehiclePickItem[];
-  friends: TripPerson[];
-  children: React.ReactNode;
-}) {
+export function QuickAddProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [formKind, setFormKind] = useState<QuickAddKind | null>(null);
+  // Dropdown lists are fetched fresh on every open (not passed down from the layout, which would
+  // re-query them on each navigation). Forms mount only once they arrive, since several pick their
+  // default account/vehicle from these lists in their initial state.
+  const [options, setOptions] = useState<QuickAddOptions | null>(null);
 
   const open = (kind?: QuickAddKind) => {
+    setOptions(null);
+    getQuickAddOptions().then(setOptions, () => setOptions(NO_OPTIONS));
     if (kind) setFormKind(kind);
     else setMenuOpen(true);
   };
@@ -62,6 +55,8 @@ export function QuickAddProvider({
     setMenuOpen(false);
     setFormKind(null);
   };
+  const { accounts, cards, vehicles, friends } = options ?? NO_OPTIONS;
+  const showForm = (kind: QuickAddKind) => formKind === kind && options !== null;
   const pick = (kind: QuickAddKind) => {
     setMenuOpen(false);
     setFormKind(kind);
@@ -103,23 +98,23 @@ export function QuickAddProvider({
           </div>
         </div>
       )}
-      {formKind === "expense" && <TransactionForm type="expense" accounts={accounts} cards={cards} onClose={closeAll} />}
-      {formKind === "income" && <TransactionForm type="income" accounts={accounts} cards={cards} onClose={closeAll} />}
-      {formKind === "transfer" && <TransferForm accounts={accounts} onClose={closeAll} />}
-      {formKind === "bill" && <BillForm accounts={accounts} onClose={closeAll} />}
-      {formKind === "sub" && <SubscriptionForm accounts={accounts} cards={cards} onClose={closeAll} />}
-      {formKind === "asset" && <AssetForm accounts={accounts} onClose={closeAll} />}
-      {formKind === "doc" && <DocumentForm onClose={closeAll} />}
-      {formKind === "fuel" && (
+      {showForm("expense") && <TransactionForm type="expense" accounts={accounts} cards={cards} onClose={closeAll} />}
+      {showForm("income") && <TransactionForm type="income" accounts={accounts} cards={cards} onClose={closeAll} />}
+      {showForm("transfer") && <TransferForm accounts={accounts} onClose={closeAll} />}
+      {showForm("bill") && <BillForm accounts={accounts} onClose={closeAll} />}
+      {showForm("sub") && <SubscriptionForm accounts={accounts} cards={cards} onClose={closeAll} />}
+      {showForm("asset") && <AssetForm accounts={accounts} onClose={closeAll} />}
+      {showForm("doc") && <DocumentForm onClose={closeAll} />}
+      {showForm("fuel") && (
         <FuelLogForm vehicles={vehicles} defaultVehicleId={vehicles[0]?.id ?? ""} accounts={accounts} cards={cards} onClose={closeAll} />
       )}
-      {formKind === "service" && (
+      {showForm("service") && (
         <VehicleServiceForm vehicles={vehicles} defaultVehicleId={vehicles[0]?.id ?? ""} accounts={accounts} cards={cards} onClose={closeAll} />
       )}
-      {formKind === "trip" && (
+      {showForm("trip") && (
         <TripForm friends={friends} onClose={closeAll} onCreated={(id) => { closeAll(); router.push(`/trips/${id}`); }} />
       )}
-      {formKind === "slips" && <SlipImportForm onClose={closeAll} />}
+      {showForm("slips") && <SlipImportForm onClose={closeAll} />}
     </QuickAddContext.Provider>
   );
 }
