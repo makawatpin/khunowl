@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { zEmptyToUndefined, zPositiveMoney } from "@/lib/validation/helpers";
+import { TXN_LIST_COLUMNS, TXN_PAGE_SIZE, nextTxnCursor, toTxnListItem, type TxnCursor, type TxnListItem, type TxnRow } from "@/lib/domain/txn-list";
 
 function revalidateMoneyPages() {
   revalidatePath("/");
@@ -136,4 +137,25 @@ export async function createTransfer(formData: FormData): Promise<{ id?: string;
 
 export async function deleteTransfer(id: string): Promise<{ error?: string }> {
   return deleteTransaction(id);
+}
+
+const cursorSchema = z.object({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), id: z.string().uuid() });
+
+/** Next page of the /money transaction list, keyset-paginated (date desc, id desc) after `cursor`. */
+export async function listTransactionsPage(cursor: TxnCursor): Promise<{ rows: TxnListItem[]; next: TxnCursor | null; error?: string }> {
+  const parsed = cursorSchema.safeParse(cursor);
+  if (!parsed.success) return { rows: [], next: null, error: "cursor ไม่ถูกต้อง" };
+  const { date, id } = parsed.data;
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("transactions")
+    .select(TXN_LIST_COLUMNS)
+    .or(`date.lt.${date},and(date.eq.${date},id.lt.${id})`)
+    .order("date", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(TXN_PAGE_SIZE);
+  if (error) return { rows: [], next: null, error: error.message };
+  const rows = (data ?? []) as TxnRow[];
+  return { rows: rows.map(toTxnListItem), next: nextTxnCursor(rows) };
 }

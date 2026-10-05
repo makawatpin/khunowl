@@ -2,7 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { todayISOInBangkok } from "@/lib/dates/today";
 import { AccountList, type AccountListItem } from "@/components/money/account-list";
 import { CardList, type CardListItem } from "@/components/money/card-list";
-import { TransactionList, type TxnListItem } from "@/components/money/transaction-list";
+import { TransactionList } from "@/components/money/transaction-list";
+import { TXN_LIST_COLUMNS, TXN_PAGE_SIZE, nextTxnCursor, toTxnListItem, type TxnListItem, type TxnRow } from "@/lib/domain/txn-list";
 import { BudgetProgress } from "@/components/money/budget-progress";
 import { MoneyStatsActions } from "@/components/money/money-stats-actions";
 import { Sec } from "@/components/ui/sec";
@@ -17,14 +18,13 @@ export default async function MoneyPage() {
   const todayISO = todayISOInBangkok();
   const monthKey = todayISO.slice(0, 7);
 
-  const [{ data: accountRows }, { data: cardRows }, { data: txnRows }, { data: budgetRows }] = await Promise.all([
+  const [{ data: accountRows }, { data: cardRows }, { data: txnRows }, { data: monthRows }, { data: budgetRows }] = await Promise.all([
     supabase.from("account_balances").select("id, name, bank, type, last4, balance, pinned").eq("archived", false),
     supabase.from("card_usage").select("id, name, bank, network, last4, used, credit_limit, statement_date, due_date, min_payment, pinned").eq("archived", false),
-    supabase
-      .from("transactions")
-      .select("id, type, amount, date, name, category, note, src_account_id, src_card_id, to_account_id, to_card_id")
-      .order("date", { ascending: false })
-      .limit(500),
+    // First page of the list (older pages load on demand via listTransactionsPage).
+    supabase.from("transactions").select(TXN_LIST_COLUMNS).order("date", { ascending: false }).order("id", { ascending: false }).limit(TXN_PAGE_SIZE),
+    // Month totals/budgets get their own query, independent of how much of the list is loaded.
+    supabase.from("transactions").select("type, amount, category").gte("date", `${monthKey}-01`).lte("date", `${monthKey}-31`).neq("type", "transfer").limit(5000),
     supabase.from("budgets").select("category, monthly_limit"),
   ]);
 
@@ -46,13 +46,11 @@ export default async function MoneyPage() {
   for (const a of accounts) sourceNames[a.id] = a.name;
   for (const c of cards) sourceNames[c.id] = c.name;
 
-  const transactions: TxnListItem[] = (txnRows ?? []).map((t) => ({
-    id: t.id, type: t.type, amount: t.amount, date: t.date, name: t.name, category: t.category, note: t.note,
-    srcId: t.src_account_id ?? t.src_card_id, srcKind: t.src_account_id ? "account" : t.src_card_id ? "card" : null,
-    toId: t.to_account_id ?? t.to_card_id, toKind: t.to_account_id ? "account" : t.to_card_id ? "card" : null,
-  }));
+  const firstPage = (txnRows ?? []) as TxnRow[];
+  const transactions: TxnListItem[] = firstPage.map(toTxnListItem);
+  const nextCursor = nextTxnCursor(firstPage);
 
-  const monthTxns = transactions.filter((t) => t.date.startsWith(monthKey));
+  const monthTxns = monthRows ?? [];
   const monthSpend = monthTxns.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
   const monthIncome = monthTxns.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
   const categorySpend = new Map<string, number>();
@@ -85,7 +83,7 @@ export default async function MoneyPage() {
       <AccountList accounts={accounts} />
       <CardList cards={cards} accounts={accountRefs} />
       <Sec title="รายการล่าสุด" />
-      <TransactionList transactions={transactions} sourceNames={sourceNames} accounts={accountRefs} cards={cardRefs} />
+      <TransactionList transactions={transactions} nextCursor={nextCursor} sourceNames={sourceNames} accounts={accountRefs} cards={cardRefs} />
       <Sec title="งบประมาณเดือนนี้" />
       <BudgetProgress rows={budgetRowsOut} />
     </>

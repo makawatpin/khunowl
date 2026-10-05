@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Icon, type IconName } from "@/components/ui/icon";
+import { listTransactionsPage } from "@/lib/actions/transactions";
+import type { TxnCursor, TxnListItem } from "@/lib/domain/txn-list";
 import { Money } from "@/components/ui/money";
 import { categoryColor } from "@/lib/domain/categories";
 import { dShort } from "@/lib/format/date";
@@ -10,19 +12,7 @@ import { todayISOInBangkok } from "@/lib/dates/today";
 import { TransactionForm, type TransactionFormInitial } from "@/components/forms/transaction-form";
 import { TransferEditForm } from "@/components/forms/transfer-edit-form";
 
-export interface TxnListItem {
-  id: string;
-  type: "expense" | "income" | "transfer";
-  amount: number;
-  date: string;
-  name: string;
-  category: string | null;
-  note: string | null;
-  srcId: string | null; // account or card id
-  srcKind: "account" | "card" | null;
-  toId: string | null; // account or card id (transfer only)
-  toKind: "account" | "card" | null;
-}
+export type { TxnListItem };
 
 const CAT_ICON: Record<string, IconName> = {
   "อาหาร": "food", "เดินทาง": "car", "ช้อปปิ้ง": "box", "บ้าน": "house",
@@ -34,11 +24,14 @@ type Filter = "all" | "expense" | "income" | "transfer";
 
 export function TransactionList({
   transactions,
+  nextCursor,
   sourceNames,
   accounts,
   cards,
 }: {
   transactions: TxnListItem[];
+  /** Cursor for the page after `transactions` (null = everything is already loaded). */
+  nextCursor: TxnCursor | null;
   sourceNames: Record<string, string>;
   accounts: { id: string; name: string }[];
   cards: { id: string; name: string }[];
@@ -49,19 +42,38 @@ export function TransactionList({
   const [account, setAccount] = useState("");
   const [showMore, setShowMore] = useState(false);
   const [editing, setEditing] = useState<TxnListItem | null>(null);
+  // Older pages fetched via "โหลดเพิ่ม". Reset whenever the server-rendered first page changes
+  // (router.refresh after an edit) so edited/deleted rows can't linger from a stale older page.
+  const [older, setOlder] = useState<TxnListItem[]>([]);
+  const [cursor, setCursor] = useState<TxnCursor | null>(nextCursor);
+  const [loadingMore, setLoadingMore] = useState(false);
+  useEffect(() => {
+    setOlder([]);
+    setCursor(nextCursor);
+  }, [transactions, nextCursor]);
+
+  const loadMore = async () => {
+    if (!cursor) return;
+    setLoadingMore(true);
+    const res = await listTransactionsPage(cursor);
+    setLoadingMore(false);
+    if (res.error) return;
+    setOlder((prev) => [...prev, ...res.rows]);
+    setCursor(res.next);
+  };
 
   const allSources = useMemo(() => [...accounts, ...cards], [accounts, cards]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return transactions
+    return [...transactions, ...older]
       .filter((t) => filter === "all" || t.type === filter)
       .filter((t) => !account || t.srcId === account || t.toId === account)
       .filter((t) => !q || [t.name, t.category, t.note].some((x) => (x ?? "").toLowerCase().includes(q)))
       .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
-  }, [transactions, filter, account, query]);
+  }, [transactions, older, filter, account, query]);
 
-  const visible = filtered.slice(0, showMore ? 200 : 8);
+  const visible = showMore ? filtered : filtered.slice(0, 8);
   const groups = groupByDay(visible);
 
   const clearFilters = () => {
@@ -133,7 +145,17 @@ export function TransactionList({
             style={{ justifyContent: "center", color: "var(--accent-deep)", fontSize: 13.5 }}
             onClick={() => setShowMore((v) => !v)}
           >
-            {showMore ? "ย่อ" : `ดูทั้งหมด ${filtered.length} รายการ`}
+            {showMore ? "ย่อ" : `ดูทั้งหมด ${filtered.length}${cursor ? "+" : ""} รายการ`}
+          </button>
+        )}
+        {cursor && (showMore || filtered.length <= 8) && (
+          <button
+            className="row rowlink"
+            style={{ justifyContent: "center", color: "var(--accent-deep)", fontSize: 13.5 }}
+            onClick={loadMore}
+            disabled={loadingMore}
+          >
+            {loadingMore ? "กำลังโหลด…" : "โหลดรายการเก่ากว่านี้"}
           </button>
         )}
       </div>
