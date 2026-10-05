@@ -46,7 +46,7 @@ a{color:var(--accent-deep);text-decoration:none}a:hover{color:var(--accent)}
 .topbar::after{width:120px;height:120px;left:38%;bottom:-84px;border:1.5px solid rgba(255,255,255,.26)}
 .topbar h1{margin:0;font-size:28px;font-weight:600;letter-spacing:-.02em;flex:0 1 auto;white-space:nowrap;min-width:0;color:#fff}
 .topbar-actions{display:flex;align-items:center;gap:10px;flex-wrap:nowrap;margin-left:auto;min-width:0}
-.content{padding:22px 30px 36px;width:100%;overflow-y:auto;flex:1}
+.content{padding:22px 30px 36px;width:100%;overflow-y:auto;flex:1;margin:0 auto}
 .page-loading{display:flex;align-items:center;justify-content:center;min-height:300px}
 .page-loading-spinner{width:28px;height:28px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--accent);animation:page-loading-spin .7s linear infinite}
 @keyframes page-loading-spin{to{transform:rotate(360deg)}}
