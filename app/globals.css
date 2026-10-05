@@ -139,8 +139,9 @@ a{color:var(--accent-deep);text-decoration:none}a:hover{color:var(--accent)}
   .topbar-actions.searching .searchbox{display:flex;flex:1 1 auto}
   .only-mobile{display:flex!important}
   .botnav{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;bottom:0;left:0;right:0;height:var(--nav-h);background:var(--panel);border-top:1px solid var(--line);z-index:30;padding-bottom:env(safe-area-inset-bottom)}
-  .botnav button{position:relative;border:none;background:none;font-family:inherit;font-size:12px;color:var(--ink-faint);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;min-height:56px}
-  .botnav button.on{color:var(--accent-deep)}
+  .botnav button,.botnav a{position:relative;text-decoration:none;border:none;background:none;font-family:inherit;font-size:12px;color:var(--ink-faint);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;min-height:56px}
+  .botnav button.on,.botnav a.on{color:var(--accent-deep)}
+  .botnav a:hover{color:var(--ink-faint)}.botnav a.on:hover{color:var(--accent-deep)}
   .botnav .plus{display:flex;align-items:center;justify-content:center;background:var(--hero);color:#fff;width:48px;height:48px;border-radius:16px;align-self:center;gap:0;min-height:48px;box-shadow:0 8px 18px rgba(238,78,151,.3)}
 }
 .more-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
