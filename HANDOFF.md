@@ -156,3 +156,11 @@ Notes:
 - The compact icon-rail breakpoint (901–1240px) and the mobile layout were not touched or re-tested.
 - A `.claude/launch.json` now also exists **in this repo** (config name `dev`, `npm run dev`, port 3000) for `preview_start`; the older note above about one in the parent folder may be stale. Preview did not require login in this session — the dev server rendered real data straight away.
 - Production (`khunowl.vercel.app`) only shows these changes after Vercel rebuilds from the push.
+
+## Post-deploy fix — mobile bottom nav
+
+On phones the bottom nav looked broken: `.botnav` styles were written for `button` only, but ภาพรวม/เงิน/ปฏิทิน are `<Link>` (`<a>`) elements, so they were unstyled (left-aligned, always accent-pink, different height from the "อื่น ๆ" button). Fix in `app/globals.css`: `.botnav button,.botnav a` share the flex/colour rules and `.botnav a.on` marks the active tab (commit `2c161fa`). Verified at 375px: 5 equal 75px columns, same top/height, only the active tab is pink. Lesson: when styling a nav that mixes `<Link>` and `<button>`, target both elements. The little "N" circle seen bottom-left in dev screenshots is Next's dev indicator, not in production.
+
+## Next: full-system audit
+
+`AUDIT-BRIEF.md` holds a ready-to-paste, token-conscious prompt for an Opus audit (bugs, security/RLS, money/date correctness, performance, UX/UI, responsive, PWA). Known leads already identified, so the auditor can start there: the 6-query fan-out in `app/(app)/layout.tsx`; icon-rail breakpoint (901–1240px) untested after the sidebar spacing change; cron routes never re-verified against the production `CRON_SECRET`; slip OCR / legacy import / clear-all-data unverified end-to-end.
