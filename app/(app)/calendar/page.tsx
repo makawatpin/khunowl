@@ -20,8 +20,8 @@ export default async function CalendarPage() {
     { data: taskRows },
     { data: docRows },
   ] = await Promise.all([
-    supabase.from("bills").select("name, amount, cycle, next_due, domain"),
-    supabase.from("subscriptions").select("name, price, cycle, next_billing, domain"),
+    supabase.from("bills").select("name, amount, cycle, next_due, anchor_day, domain"),
+    supabase.from("subscriptions").select("name, price, cycle, next_billing, anchor_day, domain"),
     supabase.from("card_usage").select("name, used, due_date").eq("archived", false),
     supabase.from("recurring_income").select("name, amount, day_of_month"),
     supabase.from("assets").select("name, warranty_until").eq("sold", false),
@@ -36,8 +36,8 @@ export default async function CalendarPage() {
 
   const events = calendarEvents({
     todayISO,
-    bills: (billRows ?? []).map((b) => ({ name: b.name, amount: b.amount, cycle: b.cycle, nextDue: b.next_due, domain: b.domain })),
-    subscriptions: (subRows ?? []).map((s) => ({ name: s.name, price: s.price, cycle: s.cycle, nextBilling: s.next_billing, domain: s.domain })),
+    bills: (billRows ?? []).map((b) => ({ name: b.name, amount: b.amount, cycle: b.cycle, nextDue: b.next_due, anchorDay: b.anchor_day, domain: b.domain })),
+    subscriptions: (subRows ?? []).map((s) => ({ name: s.name, price: s.price, cycle: s.cycle, nextBilling: s.next_billing, anchorDay: s.anchor_day, domain: s.domain })),
     cards: (cardRows ?? [])
       .filter((c): c is typeof c & { name: string } => !!c.name)
       .map((c) => ({ name: c.name, used: c.used ?? 0, dueDate: c.due_date })),

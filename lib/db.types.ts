@@ -135,6 +135,7 @@ export type Database = {
       bills: {
         Row: {
           account_id: string | null
+          anchor_day: number | null
           amount: number
           auto_debit: boolean
           created_at: string
@@ -150,6 +151,7 @@ export type Database = {
         }
         Insert: {
           account_id?: string | null
+          anchor_day?: number | null
           amount: number
           auto_debit?: boolean
           created_at?: string
@@ -165,6 +167,7 @@ export type Database = {
         }
         Update: {
           account_id?: string | null
+          anchor_day?: number | null
           amount?: number
           auto_debit?: boolean
           created_at?: string
@@ -730,6 +733,7 @@ export type Database = {
       subscriptions: {
         Row: {
           account_id: string | null
+          anchor_day: number | null
           active: boolean
           cancel_url: string | null
           card_id: string | null
@@ -745,6 +749,7 @@ export type Database = {
         }
         Insert: {
           account_id?: string | null
+          anchor_day?: number | null
           active?: boolean
           cancel_url?: string | null
           card_id?: string | null
@@ -760,6 +765,7 @@ export type Database = {
         }
         Update: {
           account_id?: string | null
+          anchor_day?: number | null
           active?: boolean
           cancel_url?: string | null
           card_id?: string | null

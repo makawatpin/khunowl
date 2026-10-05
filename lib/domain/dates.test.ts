@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addCycle, addDays, addMonths, daysTo, dueLabel, nextIncomeDate, occurrences } from "./dates";
+import { addCycle, addDays, addMonths, anchorDayOf, anchorForEdit, dayOf, daysTo, dueLabel, nextIncomeDate, occurrences } from "./dates";
 
 describe("addMonths", () => {
   it("clamps end-of-month overflow (31 Jan + 1mo → 28 Feb, non-leap year)", () => {
@@ -29,6 +29,29 @@ describe("addDays / addCycle", () => {
     expect(addCycle("2026-01-01", "semiannual")).toBe("2026-07-01");
     expect(addCycle("2026-01-01", "yearly")).toBe("2027-01-01");
   });
+  it("addCycle with an anchor day restores the 31st after a clamped month (no drift)", () => {
+    expect(addCycle("2027-02-28", "monthly", 31)).toBe("2027-03-31");
+    expect(addCycle("2027-03-31", "monthly", 31)).toBe("2027-04-30");
+    expect(addCycle("2027-04-30", "monthly", 31)).toBe("2027-05-31");
+  });
+  it("addCycle without an anchor still clamps and drifts (legacy behaviour)", () => {
+    expect(addCycle("2027-02-28", "monthly")).toBe("2027-03-28");
+  });
+});
+
+describe("anchorDayOf", () => {
+  it("prefers the stored anchor, else the day of the date", () => {
+    expect(anchorDayOf("2027-02-28", 31)).toBe(31);
+    expect(anchorDayOf("2027-02-28", null)).toBe(28);
+  });
+  it("dayOf reads the day of month", () => {
+    expect(dayOf("2027-02-28")).toBe(28);
+  });
+  it("anchorForEdit keeps the old anchor when the date wasn't changed, else uses the new day", () => {
+    expect(anchorForEdit("2027-02-28", "2027-02-28", 31)).toBe(31);
+    expect(anchorForEdit("2027-03-15", "2027-02-28", 31)).toBe(15);
+    expect(anchorForEdit("2027-02-28", "2027-02-28", null)).toBe(28);
+  });
 });
 
 describe("occurrences", () => {
@@ -44,6 +67,16 @@ describe("occurrences", () => {
   });
   it("keeps advancing through cycles to find occurrences long after `start`", () => {
     expect(occurrences("2026-01-05", "yearly", "2030-01-01", "2030-12-31")).toEqual(["2030-01-05"]);
+  });
+  it("does not drift after a short month (31st stays the 31st where possible)", () => {
+    expect(occurrences("2027-01-31", "monthly", "2027-01-01", "2027-05-31")).toEqual([
+      "2027-01-31", "2027-02-28", "2027-03-31", "2027-04-30", "2027-05-31",
+    ]);
+  });
+  it("honours an explicit anchor when start is already clamped", () => {
+    expect(occurrences("2027-02-28", "monthly", "2027-02-01", "2027-03-31", 60, 31)).toEqual([
+      "2027-02-28", "2027-03-31",
+    ]);
   });
   it("returns nothing once `start` is already past `to`", () => {
     expect(occurrences("2031-01-05", "monthly", "2026-01-01", "2026-12-31")).toEqual([]);

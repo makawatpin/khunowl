@@ -26,14 +26,31 @@ function formatISO(y: number, monthZeroBased: number, d: number): string {
   return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, "0")}-${String(dt.getUTCDate()).padStart(2, "0")}`;
 }
 
-/** Adds `n` months, clamping the day to the target month's last day (31 Jan + 1mo → 28/29 Feb). */
-export function addMonths(iso: string, n: number): string {
+/** Adds `n` months, clamping the day to the target month's last day (31 Jan + 1mo → 28/29 Feb).
+ * With `anchorDay`, the target day is the anchor (clamped) instead of `iso`'s own day — so a
+ * date already clamped to 28 Feb rolls back to the 31st in March rather than drifting to the 28th. */
+export function addMonths(iso: string, n: number, anchorDay?: number): string {
   const { y, m, d } = parseISO(iso);
   const monthIndex = m - 1 + n;
   const targetYear = y + Math.floor(monthIndex / 12);
   const targetMonth = ((monthIndex % 12) + 12) % 12;
-  const clampedDay = Math.min(d, daysInMonth(targetYear, targetMonth));
+  const clampedDay = Math.min(anchorDay ?? d, daysInMonth(targetYear, targetMonth));
   return formatISO(targetYear, targetMonth, clampedDay);
+}
+
+export function dayOf(iso: string): number {
+  return parseISO(iso).d;
+}
+
+/** The day-of-month a recurring item is really due on: the stored anchor, else `iso`'s own day. */
+export function anchorDayOf(iso: string, storedAnchor: number | null | undefined): number {
+  return storedAnchor ?? dayOf(iso);
+}
+
+/** Anchor to store when an item is edited: an unchanged date keeps its anchor (a 28 Feb date
+ * anchored on the 31st must stay anchored on the 31st); a newly typed date sets a fresh anchor. */
+export function anchorForEdit(newIso: string, prevIso: string | null | undefined, prevAnchor: number | null | undefined): number {
+  return newIso === prevIso && prevAnchor ? prevAnchor : dayOf(newIso);
 }
 
 export function addDays(iso: string, n: number): string {
@@ -42,18 +59,21 @@ export function addDays(iso: string, n: number): string {
   return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, "0")}-${String(dt.getUTCDate()).padStart(2, "0")}`;
 }
 
-export function addCycle(iso: string, cycle: Cycle): string {
-  return addMonths(iso, CYCLE_MONTHS[cycle]);
+export function addCycle(iso: string, cycle: Cycle, anchorDay?: number): string {
+  return addMonths(iso, CYCLE_MONTHS[cycle], anchorDay);
 }
 
-/** All cycle occurrences of `start` that fall within [from, to], capped at `limit` iterations. */
-export function occurrences(start: string, cycle: Cycle, from: string, to: string, limit = 60): string[] {
+/** All cycle occurrences of `start` that fall within [from, to], capped at `limit` iterations.
+ * Each occurrence is computed from `start` (k × cycle months) on the anchor day, never chained
+ * from the previous clamped date, so month-end dates don't drift. */
+export function occurrences(start: string, cycle: Cycle, from: string, to: string, limit = 60, anchorDay?: number): string[] {
   const out: string[] = [];
-  let d = start;
-  let k = 0;
-  while (d && d <= to && k++ < limit) {
+  if (!start) return out;
+  const anchor = anchorDayOf(start, anchorDay);
+  for (let k = 0; k < limit; k++) {
+    const d = k === 0 ? start : addMonths(start, k * CYCLE_MONTHS[cycle], anchor);
+    if (d > to) break;
     if (d >= from) out.push(d);
-    d = addCycle(d, cycle);
   }
   return out;
 }

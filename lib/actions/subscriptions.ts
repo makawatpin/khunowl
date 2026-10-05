@@ -3,9 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { anchorForEdit, dayOf } from "@/lib/domain/dates";
 import { zEmptyToUndefined, zPositiveMoney } from "@/lib/validation/helpers";
 
-const CYCLES = ["monthly", "yearly"] as const;
+// The form only offers monthly/yearly, but the DB enum (and legacy imports) allow all four —
+// accept them all so editing an imported quarterly subscription doesn't fail validation.
+const CYCLES = ["monthly", "quarterly", "semiannual", "yearly"] as const;
 
 function revalidateMoneyPages() {
   revalidatePath("/");
@@ -48,7 +51,7 @@ export async function createSubscription(formData: FormData): Promise<{ id?: str
   const { data, error } = await supabase
     .from("subscriptions")
     .insert({
-      name: d.name, domain: d.domain, price: d.price, cycle: d.cycle, next_billing: d.nextBilling,
+      name: d.name, domain: d.domain, price: d.price, cycle: d.cycle, next_billing: d.nextBilling, anchor_day: dayOf(d.nextBilling),
       account_id: d.sourceKind === "account" ? d.source : null,
       card_id: d.sourceKind === "card" ? d.source : null,
     })
@@ -66,10 +69,12 @@ export async function updateSubscription(id: string, formData: FormData): Promis
   const d = parsed.data;
 
   const supabase = await createClient();
+  const { data: prev } = await supabase.from("subscriptions").select("next_billing, anchor_day").eq("id", id).single();
   const { error } = await supabase
     .from("subscriptions")
     .update({
       name: d.name, domain: d.domain, price: d.price, cycle: d.cycle, next_billing: d.nextBilling,
+      anchor_day: anchorForEdit(d.nextBilling, prev?.next_billing, prev?.anchor_day),
       account_id: d.sourceKind === "account" ? d.source : null,
       card_id: d.sourceKind === "card" ? d.source : null,
     })

@@ -17,8 +17,8 @@ export default async function DashboardPage() {
   const [{ data: accountRows }, { data: cardRows }, { data: billRows }, { data: subRows }, { data: incomeRows }] = await Promise.all([
     supabase.from("account_balances").select("id, name, balance").eq("archived", false),
     supabase.from("card_usage").select("id, name, used, due_date, min_payment, bank").eq("archived", false),
-    supabase.from("bills").select("id, name, amount, cycle, next_due, domain, auto_debit, account_id"),
-    supabase.from("subscriptions").select("id, name, price, cycle, next_billing, domain, account_id, card_id"),
+    supabase.from("bills").select("id, name, amount, cycle, next_due, anchor_day, domain, auto_debit, account_id"),
+    supabase.from("subscriptions").select("id, name, price, cycle, next_billing, anchor_day, domain, account_id, card_id"),
     supabase.from("recurring_income").select("id, name, amount, day_of_month"),
   ]);
 
@@ -27,9 +27,9 @@ export default async function DashboardPage() {
   const cards = (cardRows ?? []).filter((c): c is typeof c & { id: string; name: string } => !!c.id && !!c.name);
   const cardDebt = cards.reduce((s, c) => s + (c.used ?? 0), 0);
 
-  const bills = (billRows ?? []).map((b) => ({ id: b.id, name: b.name, amount: b.amount, cycle: b.cycle, nextDue: b.next_due, domain: b.domain, auto: b.auto_debit, accountId: b.account_id }));
+  const bills = (billRows ?? []).map((b) => ({ id: b.id, name: b.name, amount: b.amount, cycle: b.cycle, nextDue: b.next_due, anchorDay: b.anchor_day, domain: b.domain, auto: b.auto_debit, accountId: b.account_id }));
   const subscriptions = (subRows ?? []).map((s) => ({
-    id: s.id, name: s.name, price: s.price, cycle: s.cycle, nextBilling: s.next_billing, domain: s.domain,
+    id: s.id, name: s.name, price: s.price, cycle: s.cycle, nextBilling: s.next_billing, anchorDay: s.anchor_day, domain: s.domain,
     hasValidSource: !!(s.account_id ? accounts.some((a) => a.id === s.account_id) : s.card_id ? cards.some((c) => c.id === s.card_id) : false),
     accountId: s.account_id, cardId: s.card_id,
   }));

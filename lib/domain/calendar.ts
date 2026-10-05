@@ -28,8 +28,8 @@ export interface CalendarEvent {
 
 export function calendarEvents(input: {
   todayISO: string;
-  bills: { name: string; amount: number; cycle: Cycle; nextDue: string; domain?: string | null }[];
-  subscriptions: { name: string; price: number; cycle: Cycle; nextBilling: string; domain?: string | null }[];
+  bills: { name: string; amount: number; cycle: Cycle; nextDue: string; anchorDay?: number | null; domain?: string | null }[];
+  subscriptions: { name: string; price: number; cycle: Cycle; nextBilling: string; anchorDay?: number | null; domain?: string | null }[];
   cards: { name: string; used: number; dueDate: string | null }[];
   income: { name: string; amount: number; dayOfMonth: number }[];
   assets: { name: string; warrantyUntil: string | null }[];
@@ -46,10 +46,10 @@ export function calendarEvents(input: {
   const ev: CalendarEvent[] = [];
 
   for (const b of bills) {
-    for (const d of occurrences(b.nextDue, b.cycle, from, to)) ev.push({ date: d, kind: "bill", title: b.name, sub: money(b.amount), tone: "red", domain: b.domain });
+    for (const d of occurrences(b.nextDue, b.cycle, from, to, 60, b.anchorDay ?? undefined)) ev.push({ date: d, kind: "bill", title: b.name, sub: money(b.amount), tone: "red", domain: b.domain });
   }
   for (const s of subscriptions) {
-    for (const d of occurrences(s.nextBilling, s.cycle, from, to)) ev.push({ date: d, kind: "sub", title: s.name, sub: money(s.price), tone: "accent", domain: s.domain });
+    for (const d of occurrences(s.nextBilling, s.cycle, from, to, 60, s.anchorDay ?? undefined)) ev.push({ date: d, kind: "sub", title: s.name, sub: money(s.price), tone: "accent", domain: s.domain });
   }
   for (const c of cards) {
     if (c.used > 0 && c.dueDate) ev.push({ date: c.dueDate, kind: "card", title: `ชำระ ${c.name}`, sub: money(c.used), tone: "red" });

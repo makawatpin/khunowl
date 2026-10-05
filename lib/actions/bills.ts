@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { addCycle, type Cycle } from "@/lib/domain/dates";
+import { addCycle, anchorDayOf, anchorForEdit, dayOf, type Cycle } from "@/lib/domain/dates";
 import { guessBillCategory } from "@/lib/domain/money";
 import { todayISOInBangkok } from "@/lib/dates/today";
 import { zEmptyToUndefined, zPositiveMoney } from "@/lib/validation/helpers";
@@ -50,7 +50,7 @@ export async function createBill(formData: FormData): Promise<{ id?: string; err
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("bills")
-    .insert({ name: d.name, domain: d.domain, amount: d.amount, cycle: d.cycle, next_due: d.nextDue, account_id: d.accountId, auto_debit: d.autoDebit })
+    .insert({ name: d.name, domain: d.domain, amount: d.amount, cycle: d.cycle, next_due: d.nextDue, anchor_day: dayOf(d.nextDue), account_id: d.accountId, auto_debit: d.autoDebit })
     .select("id")
     .single();
   if (error) return { error: error.message };
@@ -65,9 +65,10 @@ export async function updateBill(id: string, formData: FormData): Promise<{ erro
   const d = parsed.data;
 
   const supabase = await createClient();
+  const { data: prev } = await supabase.from("bills").select("next_due, anchor_day").eq("id", id).single();
   const { error } = await supabase
     .from("bills")
-    .update({ name: d.name, domain: d.domain, amount: d.amount, cycle: d.cycle, next_due: d.nextDue, account_id: d.accountId, auto_debit: d.autoDebit })
+    .update({ name: d.name, domain: d.domain, amount: d.amount, cycle: d.cycle, next_due: d.nextDue, anchor_day: anchorForEdit(d.nextDue, prev?.next_due, prev?.anchor_day), account_id: d.accountId, auto_debit: d.autoDebit })
     .eq("id", id);
   if (error) return { error: error.message };
 
@@ -87,7 +88,7 @@ export async function payBillNow(billId: string): Promise<{ txnId?: string; prev
   const supabase = await createClient();
   const { data: bill, error: billErr } = await supabase
     .from("bills")
-    .select("name, amount, cycle, next_due, account_id, last_paid")
+    .select("name, amount, cycle, next_due, anchor_day, account_id, last_paid")
     .eq("id", billId)
     .single();
   if (billErr || !bill) return { error: "ไม่พบบิล" };
@@ -107,7 +108,7 @@ export async function payBillNow(billId: string): Promise<{ txnId?: string; prev
   const prevLastPaid = bill.last_paid;
   const { error: updateErr } = await supabase
     .from("bills")
-    .update({ next_due: addCycle(bill.next_due, bill.cycle as Cycle), last_paid: today })
+    .update({ next_due: addCycle(bill.next_due, bill.cycle as Cycle, anchorDayOf(bill.next_due, bill.anchor_day)), last_paid: today })
     .eq("id", billId);
   if (updateErr) return { error: updateErr.message };
 

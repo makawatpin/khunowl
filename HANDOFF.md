@@ -164,3 +164,13 @@ On phones the bottom nav looked broken: `.botnav` styles were written for `butto
 ## Next: full-system audit
 
 `AUDIT-BRIEF.md` holds a ready-to-paste, token-conscious prompt for an Opus audit (bugs, security/RLS, money/date correctness, performance, UX/UI, responsive, PWA). Known leads already identified, so the auditor can start there: the 6-query fan-out in `app/(app)/layout.tsx`; icon-rail breakpoint (901–1240px) untested after the sidebar spacing change; cron routes never re-verified against the production `CRON_SECRET`; slip OCR / legacy import / clear-all-data unverified end-to-end.
+
+## Audit fixes — batch 1 (#9 #10 #11 #12 #14 #31 of the audit table)
+
+- **Migrations 0004–0006 applied to the shared Supabase project** (files in `supabase/migrations/`): partial indexes on `transactions(src_account_id|src_card_id|to_account_id|to_card_id)`; `bills.anchor_day` / `subscriptions.anchor_day` (backfilled from the current due day); `trip_expense_shares.member_id` FK changed from `on delete cascade` to `no action`. `lib/db.types.ts` was hand-edited for `anchor_day` (not regenerated).
+- **Month-end drift fixed:** `addMonths/addCycle/occurrences` take an optional anchor day (`lib/domain/dates.ts`). Every place that rolls or projects a bill/sub date passes `anchor_day` (process-due, `payBillNow`, calendar, forecast, dashboard). Create sets `anchor_day = day(next_due)`; update keeps the old anchor if the date field wasn't changed (`anchorForEdit`). Dates that had already drifted before 0005 stay at their drifted day — the backfill can't know the original.
+- **Auto-debit transactions are dated on the due date**, not "today", so a multi-cycle catch-up lands each charge in its own month.
+- `saveBudgets` upserts then deletes only removed categories (no more delete-all-first); zod-validated.
+- `updateTrip` refuses to remove a member who is a payer / has shares / is in an itemized line / has a settlement (server-side; the DB FK now also blocks the share case). The guard's PostgREST queries passed typecheck but were **not exercised live** (dev server was down) — click-test "แก้ไขทริป" → remove a member with expenses.
+- `SONNET-FIXES.md` holds the mechanical batch delegated to another session.
+- Reminder: running `next build` while a dev server is live on the same `.next` breaks that server (happened again during the audit).

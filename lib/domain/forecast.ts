@@ -7,6 +7,8 @@ export interface ForecastBill {
   amount: number;
   cycle: Cycle;
   nextDue: string;
+  /** Stored bills.anchor_day — keeps projected month-end dates from drifting. */
+  anchorDay?: number | null;
 }
 export interface ForecastSubscription {
   id: string;
@@ -14,6 +16,7 @@ export interface ForecastSubscription {
   price: number;
   cycle: Cycle;
   nextBilling: string;
+  anchorDay?: number | null;
   /** False when the account/card it bills to no longer exists (prototype: `LOS_ACCOUNTS.find(...)`). */
   hasValidSource: boolean;
 }
@@ -58,11 +61,11 @@ export function forecast(opts: {
 
   for (const b of bills) {
     if (b.nextDue < todayISO) items.push({ name: `${b.name} (ค้างจ่าย)`, amount: -b.amount, date: todayISO });
-    for (const d of occurrences(b.nextDue, b.cycle, todayISO, end)) items.push({ name: b.name, amount: -b.amount, date: d });
+    for (const d of occurrences(b.nextDue, b.cycle, todayISO, end, 60, b.anchorDay ?? undefined)) items.push({ name: b.name, amount: -b.amount, date: d });
   }
   for (const s of subscriptions) {
     if (!s.hasValidSource) continue;
-    for (const d of occurrences(s.nextBilling, s.cycle, todayISO, end)) items.push({ name: s.name, amount: -s.price, date: d });
+    for (const d of occurrences(s.nextBilling, s.cycle, todayISO, end, 60, s.anchorDay ?? undefined)) items.push({ name: s.name, amount: -s.price, date: d });
   }
   for (const c of cards) {
     if (c.used > 0 && c.dueDate && c.dueDate <= end) {

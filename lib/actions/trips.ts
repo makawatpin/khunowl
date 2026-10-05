@@ -101,7 +101,24 @@ export async function updateTrip(id: string, formData: FormData): Promise<{ erro
   const toAdd = [...friendIds].filter((fid) => !current.some((m) => m.friend_id === fid));
 
   if (toRemove.length) {
-    const { error } = await supabase.from("trip_members").delete().in("id", toRemove.map((m) => m.id));
+    // Server-side guard (the form's chip guard is client-only): a member who appears in any expense —
+    // payer, equal/custom share, or itemized line — or in a settlement must not be removed.
+    // Deleting them would cascade-delete their trip_expense_shares rows and silently leave
+    // expenses whose shares no longer sum to the amount (balances go wrong).
+    const removeIds = toRemove.map((m) => m.id);
+    const [{ count: shareCount }, { count: payerCount }, { count: itemCount }, { count: settleCount }] = await Promise.all([
+      supabase.from("trip_expense_shares").select("member_id", { count: "exact", head: true }).in("member_id", removeIds),
+      supabase.from("trip_expenses").select("id", { count: "exact", head: true }).eq("trip_id", id).in("paid_by", removeIds),
+      supabase.from("trip_expense_items").select("id, trip_expenses!inner(trip_id)", { count: "exact", head: true })
+        .eq("trip_expenses.trip_id", id).overlaps("people", removeIds),
+      supabase.from("trip_settlements").select("id", { count: "exact", head: true })
+        .eq("trip_id", id).or(`from_member.in.(${removeIds.join(",")}),to_member.in.(${removeIds.join(",")})`),
+    ]);
+    if ((shareCount ?? 0) + (payerCount ?? 0) + (itemCount ?? 0) + (settleCount ?? 0) > 0) {
+      return { error: "ลบสมาชิกไม่ได้ เพราะมีค่าใช้จ่ายผูกอยู่" };
+    }
+
+    const { error } = await supabase.from("trip_members").delete().in("id", removeIds);
     if (error) return { error: "ลบสมาชิกไม่ได้ เพราะมีค่าใช้จ่ายผูกอยู่" };
   }
   if (toAdd.length) {
