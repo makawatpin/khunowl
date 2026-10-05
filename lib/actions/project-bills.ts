@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { removeFile, uploadFile } from "@/lib/supabase/storage";
+import { removeFile, uploadedPath } from "@/lib/supabase/storage";
 import { billTotal } from "@/lib/domain/projects";
 import { zEmptyToUndefined } from "@/lib/validation/helpers";
 
@@ -48,11 +48,10 @@ export async function createProjectBill(projectId: string, formData: FormData): 
   if (!auth.user) return { error: "ไม่พบผู้ใช้" };
 
   let attachmentPath: string | null = null;
-  const file = formData.get("attachment");
-  if (file instanceof File && file.size > 0) {
-    const up = await uploadFile(supabase, auth.user.id, "receipts", file);
-    if (up.error) return { error: up.error };
-    attachmentPath = up.path ?? null;
+  const up = uploadedPath(formData, "attachmentPath", auth.user.id, "receipts");
+  if (up.error) return { error: up.error };
+  if (up.path) {
+    attachmentPath = up.path;
   }
 
   const total = billTotal(d.items);
@@ -88,11 +87,10 @@ export async function updateProjectBill(id: string, formData: FormData): Promise
   const { data: existing } = await supabase.from("project_bills").select("attachment_path").eq("id", id).single();
 
   let attachmentPath: string | null | undefined = undefined;
-  const file = formData.get("attachment");
-  if (file instanceof File && file.size > 0) {
-    const up = await uploadFile(supabase, auth.user.id, "receipts", file);
-    if (up.error) return { error: up.error };
-    attachmentPath = up.path ?? null;
+  const up = uploadedPath(formData, "attachmentPath", auth.user.id, "receipts");
+  if (up.error) return { error: up.error };
+  if (up.path) {
+    attachmentPath = up.path;
     await removeFile(supabase, existing?.attachment_path);
   }
 

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { removeFile, signedUrl, uploadFile } from "@/lib/supabase/storage";
+import { removeFile, signedUrl, uploadedPath } from "@/lib/supabase/storage";
 import { zEmptyToUndefined } from "@/lib/validation/helpers";
 
 function revalidateDocPages() {
@@ -41,11 +41,10 @@ export async function createDocument(formData: FormData): Promise<{ id?: string;
   if (!auth.user) return { error: "ไม่พบผู้ใช้" };
 
   let filePath: string | null = null;
-  const file = formData.get("file");
-  if (file instanceof File && file.size > 0) {
-    const up = await uploadFile(supabase, auth.user.id, "docs", file);
-    if (up.error) return { error: up.error };
-    filePath = up.path ?? null;
+  const up = uploadedPath(formData, "filePath", auth.user.id, "docs");
+  if (up.error) return { error: up.error };
+  if (up.path) {
+    filePath = up.path;
   }
 
   const { data, error } = await supabase
@@ -71,11 +70,10 @@ export async function updateDocument(id: string, formData: FormData): Promise<{ 
   const { data: existing } = await supabase.from("documents").select("file_path").eq("id", id).single();
 
   let filePath: string | null | undefined = undefined;
-  const file = formData.get("file");
-  if (file instanceof File && file.size > 0) {
-    const up = await uploadFile(supabase, auth.user.id, "docs", file);
-    if (up.error) return { error: up.error };
-    filePath = up.path ?? null;
+  const up = uploadedPath(formData, "filePath", auth.user.id, "docs");
+  if (up.error) return { error: up.error };
+  if (up.path) {
+    filePath = up.path;
     await removeFile(supabase, existing?.file_path);
   }
 

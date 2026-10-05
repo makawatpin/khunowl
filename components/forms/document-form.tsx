@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { attachUpload } from "@/lib/client/upload";
 import { useRouter } from "next/navigation";
 import { FormModal, Field, FieldGrid } from "@/components/ui/form-modal";
 import { createDocument, deleteDocument, updateDocument } from "@/lib/actions/documents";
@@ -40,7 +41,12 @@ export function DocumentForm({ initial, onClose }: { initial?: DocumentFormIniti
     fd.set("expiry", expiry);
     fd.set("related", related);
     fd.set("note", note);
-    if (file) fd.set("file", file);
+    const uploadErr = await attachUpload(fd, "filePath", file, "docs");
+    if (uploadErr) {
+      setPending(false);
+      setError(uploadErr);
+      return;
+    }
     if (initial) {
       const res = await updateDocument(initial.id, fd);
       setPending(false);

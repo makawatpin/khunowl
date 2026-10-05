@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { removeFile, uploadFile } from "@/lib/supabase/storage";
+import { removeFile, uploadedPath } from "@/lib/supabase/storage";
 import { zEmptyToUndefined, zNonNegativeMoney } from "@/lib/validation/helpers";
 
 function revalidateAssetPages() {
@@ -55,11 +55,10 @@ export async function createAsset(formData: FormData): Promise<{ id?: string; er
   if (!auth.user) return { error: "ไม่พบผู้ใช้" };
 
   let receiptPath: string | null = null;
-  const receipt = formData.get("receipt");
-  if (receipt instanceof File && receipt.size > 0) {
-    const up = await uploadFile(supabase, auth.user.id, "receipts", receipt);
-    if (up.error) return { error: up.error };
-    receiptPath = up.path ?? null;
+  const up = uploadedPath(formData, "receiptPath", auth.user.id, "receipts");
+  if (up.error) return { error: up.error };
+  if (up.path) {
+    receiptPath = up.path;
   }
 
   let purchaseTxnId: string | null = null;
@@ -109,11 +108,10 @@ export async function updateAsset(id: string, formData: FormData): Promise<{ err
   const { data: existing } = await supabase.from("assets").select("receipt_path").eq("id", id).single();
 
   let receiptPath: string | null | undefined = undefined;
-  const receipt = formData.get("receipt");
-  if (receipt instanceof File && receipt.size > 0) {
-    const up = await uploadFile(supabase, auth.user.id, "receipts", receipt);
-    if (up.error) return { error: up.error };
-    receiptPath = up.path ?? null;
+  const up = uploadedPath(formData, "receiptPath", auth.user.id, "receipts");
+  if (up.error) return { error: up.error };
+  if (up.path) {
+    receiptPath = up.path;
     await removeFile(supabase, existing?.receipt_path);
   }
 

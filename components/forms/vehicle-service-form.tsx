@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { attachUpload } from "@/lib/client/upload";
 import { useRouter } from "next/navigation";
 import { FormModal, Field, FieldGrid } from "@/components/ui/form-modal";
 import { Icon } from "@/components/ui/icon";
@@ -101,7 +102,12 @@ export function VehicleServiceForm({
     fd.set("provider", provider);
     fd.set("note", note);
     fd.set("items", JSON.stringify(items));
-    if (receipt) fd.set("receipt", receipt);
+    const uploadErr = await attachUpload(fd, "receiptPath", receipt, "receipts");
+    if (uploadErr) {
+      setPending(false);
+      setError(uploadErr);
+      return;
+    }
     if (!initial && paySrc) {
       fd.set("paySrc", paySrc);
       fd.set("paySrcKind", cards.some((c) => c.id === paySrc) ? "card" : "account");

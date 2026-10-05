@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { removeFile, uploadFile } from "@/lib/supabase/storage";
+import { removeFile, uploadedPath } from "@/lib/supabase/storage";
 import { bumpVehicleMileage } from "@/lib/actions/vehicles";
 import { zEmptyToUndefined } from "@/lib/validation/helpers";
 
@@ -56,11 +56,10 @@ export async function createVehicleService(vehicleId: string, formData: FormData
   if (!auth.user) return { error: "ไม่พบผู้ใช้" };
 
   let receiptPath: string | null = null;
-  const receipt = formData.get("receipt");
-  if (receipt instanceof File && receipt.size > 0) {
-    const up = await uploadFile(supabase, auth.user.id, "receipts", receipt);
-    if (up.error) return { error: up.error };
-    receiptPath = up.path ?? null;
+  const up = uploadedPath(formData, "receiptPath", auth.user.id, "receipts");
+  if (up.error) return { error: up.error };
+  if (up.path) {
+    receiptPath = up.path;
   }
 
   const cost = totalOf(d.items);
@@ -101,11 +100,10 @@ export async function updateVehicleService(id: string, vehicleId: string, formDa
   const { data: existing } = await supabase.from("vehicle_services").select("receipt_path").eq("id", id).single();
 
   let receiptPath: string | null | undefined = undefined;
-  const receipt = formData.get("receipt");
-  if (receipt instanceof File && receipt.size > 0) {
-    const up = await uploadFile(supabase, auth.user.id, "receipts", receipt);
-    if (up.error) return { error: up.error };
-    receiptPath = up.path ?? null;
+  const up = uploadedPath(formData, "receiptPath", auth.user.id, "receipts");
+  if (up.error) return { error: up.error };
+  if (up.path) {
+    receiptPath = up.path;
     await removeFile(supabase, existing?.receipt_path);
   }
 

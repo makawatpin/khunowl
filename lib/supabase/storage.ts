@@ -1,34 +1,21 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/db.types";
+import { isOwnUploadPath } from "@/lib/domain/uploads";
 
 // Path convention per README §1 / migration 0001: files/<uid>/<kind>/<uuid>.<ext>.
+// Uploads happen in the browser (lib/client/upload.ts) — Server Action bodies are size-capped.
 const BUCKET = "files";
-const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
-const MAX_DOC_BYTES = 20 * 1024 * 1024;
 
 export type UploadKind = "receipts" | "docs" | "assets" | "slips";
 
-function extOf(filename: string): string {
-  const m = /\.([a-zA-Z0-9]+)$/.exec(filename);
-  return (m ? m[1] : "bin").toLowerCase();
-}
-
-/** Uploads a File from a Server Action's FormData to the private `files` bucket. Returns the storage path (not a URL — use signedUrl() to display it). */
-export async function uploadFile(
-  supabase: SupabaseClient<Database>,
-  userId: string,
-  kind: UploadKind,
-  file: File,
-): Promise<{ path?: string; error?: string }> {
-  if (!file.type.startsWith("image/") && file.type !== "application/pdf") return { error: "รองรับเฉพาะรูปภาพหรือ PDF" };
-  const maxBytes = kind === "docs" ? MAX_DOC_BYTES : MAX_IMAGE_BYTES;
-  if (file.size > maxBytes) return { error: `ไฟล์ใหญ่เกินไป (จำกัด ${Math.round(maxBytes / 1024 / 1024)}MB)` };
-
-  const path = `${userId}/${kind}/${crypto.randomUUID()}.${extOf(file.name)}`;
-  const { error } = await supabase.storage.from(BUCKET).upload(path, file, { contentType: file.type || undefined });
-  if (error) return { error: error.message };
-  return { path };
+/** Reads a browser-uploaded storage path from `formData[field]`. `{}` when none was sent; an error
+ * when the path isn't inside the caller's own `<uid>/<kind>/` folder. */
+export function uploadedPath(formData: FormData, field: string, userId: string, kind: UploadKind): { path?: string; error?: string } {
+  const v = formData.get(field);
+  if (typeof v !== "string" || !v) return {};
+  if (!isOwnUploadPath(v, userId, kind)) return { error: "ไฟล์แนบไม่ถูกต้อง" };
+  return { path: v };
 }
 
 export async function removeFile(supabase: SupabaseClient<Database>, path: string | null | undefined): Promise<void> {

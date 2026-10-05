@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { attachUpload } from "@/lib/client/upload";
 import { useRouter } from "next/navigation";
 import { FormModal, Field, FieldGrid } from "@/components/ui/form-modal";
 import { Icon } from "@/components/ui/icon";
@@ -72,7 +73,12 @@ export function ProjectBillForm({
     fd.set("phase", phase);
     fd.set("note", note);
     fd.set("items", JSON.stringify(items));
-    if (attachment) fd.set("attachment", attachment);
+    const uploadErr = await attachUpload(fd, "attachmentPath", attachment, "receipts");
+    if (uploadErr) {
+      setPending(false);
+      setError(uploadErr);
+      return;
+    }
     if (!initial && paySrc) fd.set("paySrc", paySrc);
     if (initial) {
       const res = await updateProjectBill(initial.id, fd);

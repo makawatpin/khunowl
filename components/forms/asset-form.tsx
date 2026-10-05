@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { attachUpload } from "@/lib/client/upload";
 import { useRouter } from "next/navigation";
 import { FormModal, Field, FieldGrid } from "@/components/ui/form-modal";
 import { createAsset, deleteAsset, updateAsset } from "@/lib/actions/assets";
@@ -70,7 +71,6 @@ export function AssetForm({
     fd.set("note", note);
     if (sold) fd.set("sold", "on");
     if (!initial && paySrc) fd.set("paySrc", paySrc);
-    if (receipt) fd.set("receipt", receipt);
     return fd;
   };
 
@@ -78,6 +78,12 @@ export function AssetForm({
     setPending(true);
     setError(null);
     const fd = buildFormData();
+    const uploadErr = await attachUpload(fd, "receiptPath", receipt, "receipts");
+    if (uploadErr) {
+      setPending(false);
+      setError(uploadErr);
+      return;
+    }
     if (initial) {
       const res = await updateAsset(initial.id, fd);
       setPending(false);
