@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { usePrefs } from "@/components/providers/prefs-provider";
 import { Icon } from "@/components/ui/icon";
 import { Avatar, AvatarStack, type TripPerson } from "@/components/ui/avatar";
 import { TripForm, type TripFormInitial } from "@/components/forms/trip-form";
@@ -65,6 +66,7 @@ export function TripDetailClient({
   friends: TripPerson[];
   accounts: { id: string; name: string }[];
 }) {
+  const { hide } = usePrefs();
   const router = useRouter();
   const { show } = useToast();
   const todayISO = todayISOInBangkok();
@@ -73,7 +75,7 @@ export function TripDetailClient({
   const [expenseForm, setExpenseForm] = useState<"new" | TripDetailExpense | null>(null);
   const [settleTarget, setSettleTarget] = useState<{ from: string; to: string; amt: number } | null>(null);
 
-  const C = (a: number) => fmtC(a, trip.currency);
+  const C = (a: number) => fmtC(a, trip.currency, hide);
   const foreign = trip.currency !== "THB";
   const personOf = (id: string): TripPerson => trip.members.find((m) => m.id === id) ?? { id, name: "?", color: "#A4A8AD" };
 
@@ -129,7 +131,7 @@ export function TripDetailClient({
           {foreign && (
             <div style={{ flex: 1, minWidth: 100 }}>
               <div className="cap">≈ เงินไทย</div>
-              <div style={{ fontSize: 16, fontWeight: 600 }}>{fmtC(tot * trip.rate, "THB")}</div>
+              <div style={{ fontSize: 16, fontWeight: 600 }}>{fmtC(tot * trip.rate, "THB", hide)}</div>
             </div>
           )}
           <div style={{ flex: 1, minWidth: 100 }}>
@@ -177,7 +179,7 @@ export function TripDetailClient({
                       </span>
                       <span style={{ textAlign: "right", flexShrink: 0 }}>
                         <span style={{ display: "block", fontWeight: 600 }}>{C(amt)}</span>
-                        <span className="row-s">{foreign ? `≈ ${fmtC(amt * trip.rate, "THB")}` : e.splitMode === "equal" && n ? `คนละ ${C(amt / n)}` : ""}</span>
+                        <span className="row-s">{foreign ? `≈ ${fmtC(amt * trip.rate, "THB", hide)}` : e.splitMode === "equal" && n ? `คนละ ${C(amt / n)}` : ""}</span>
                       </span>
                     </button>
                     {open && (
@@ -231,7 +233,7 @@ export function TripDetailClient({
                   </span>
                   <span style={{ minWidth: 0, flex: 1 }}>
                     <span className="row-t">{personOf(x.from).name} โอนให้ {personOf(x.to).name}</span>
-                    <span className="row-s">{C(x.amt)}{foreign ? ` · ≈ ${fmtC(x.amt * trip.rate, "THB")}` : ""}</span>
+                    <span className="row-s">{C(x.amt)}{foreign ? ` · ≈ ${fmtC(x.amt * trip.rate, "THB", hide)}` : ""}</span>
                   </span>
                   <button className="btn btn-sm" onClick={() => setSettleTarget(x)}>
                     <Icon name="check" size={14} />

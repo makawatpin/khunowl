@@ -1,18 +1,20 @@
 "use client";
 
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { Icon, type IconName } from "@/components/ui/icon";
-import { TransactionForm } from "@/components/forms/transaction-form";
-import { TransferForm } from "@/components/forms/transfer-form";
-import { BillForm } from "@/components/forms/bill-form";
-import { SubscriptionForm } from "@/components/forms/subscription-form";
-import { AssetForm } from "@/components/forms/asset-form";
-import { DocumentForm } from "@/components/forms/document-form";
-import { FuelLogForm, type VehiclePickItem } from "@/components/forms/fuel-log-form";
-import { VehicleServiceForm } from "@/components/forms/vehicle-service-form";
-import { TripForm } from "@/components/forms/trip-form";
-import { SlipImportForm } from "@/components/forms/slip-import-form";
+const TransactionForm = dynamic(() => import("@/components/forms/transaction-form").then((m) => m.TransactionForm), { ssr: false });
+const TransferForm = dynamic(() => import("@/components/forms/transfer-form").then((m) => m.TransferForm), { ssr: false });
+const BillForm = dynamic(() => import("@/components/forms/bill-form").then((m) => m.BillForm), { ssr: false });
+const SubscriptionForm = dynamic(() => import("@/components/forms/subscription-form").then((m) => m.SubscriptionForm), { ssr: false });
+const AssetForm = dynamic(() => import("@/components/forms/asset-form").then((m) => m.AssetForm), { ssr: false });
+const DocumentForm = dynamic(() => import("@/components/forms/document-form").then((m) => m.DocumentForm), { ssr: false });
+const FuelLogForm = dynamic(() => import("@/components/forms/fuel-log-form").then((m) => m.FuelLogForm), { ssr: false });
+const VehicleServiceForm =dynamic(() => import("@/components/forms/vehicle-service-form").then((m) => m.VehicleServiceForm), { ssr: false });
+const TripForm = dynamic(() => import("@/components/forms/trip-form").then((m) => m.TripForm), { ssr: false });
+const SlipImportForm = dynamic(() => import("@/components/forms/slip-import-form").then((m) => m.SlipImportForm), { ssr: false });
+import type { VehiclePickItem } from "@/components/forms/fuel-log-form";
 import type { TripPerson } from "@/components/ui/avatar";
 
 export type QuickAddKind = "expense" | "income" | "transfer" | "bill" | "sub" | "asset" | "doc" | "fuel" | "service" | "trip" | "slips";
@@ -65,14 +67,23 @@ export function QuickAddProvider({
     setFormKind(kind);
   };
 
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [menuOpen]);
+
   return (
     <QuickAddContext.Provider value={{ open }}>
       {children}
       {menuOpen && (
         <div className="backdrop" onClick={(e) => e.target === e.currentTarget && closeAll()}>
-          <div className="modal">
+          <div className="modal" role="dialog" aria-modal="true" aria-labelledby="quick-add-title">
             <div className="modal-head">
-              <h3 style={{ flex: 1 }}>เพิ่มรายการ</h3>
+              <h3 id="quick-add-title" style={{ flex: 1 }}>เพิ่มรายการ</h3>
               <button className="btn" onClick={closeAll} style={{ padding: "6px 9px" }} aria-label="ปิด">
                 <Icon name="x" size={16} />
               </button>

@@ -30,12 +30,14 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ show }}>
       {children}
-      {toast && (
-        <div className="toast">
-          <span>{toast.message}</span>
-          {toast.undo && <button onClick={handleUndo}>เลิกทำ</button>}
-        </div>
-      )}
+      <div role="status" aria-live="polite">
+        {toast && (
+          <div className="toast">
+            <span>{toast.message}</span>
+            {toast.undo && <button onClick={handleUndo}>เลิกทำ</button>}
+          </div>
+        )}
+      </div>
     </ToastContext.Provider>
   );
 }

@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { signedUrl } from "@/lib/supabase/storage";
+import { signedUrls } from "@/lib/supabase/storage";
 import { todayISOInBangkok } from "@/lib/dates/today";
 import { DocsClient, type DocumentItem } from "@/components/docs/docs-client";
 
@@ -11,12 +11,11 @@ export default async function DocsPage() {
     .from("documents")
     .select("id, name, type, expiry, related, note, file_path");
 
-  const documents: DocumentItem[] = await Promise.all(
-    (docRows ?? []).map(async (d) => ({
-      id: d.id, name: d.name, type: d.type, expiry: d.expiry, related: d.related, note: d.note,
-      fileUrl: await signedUrl(supabase, d.file_path),
-    })),
-  );
+  const urls = await signedUrls(supabase, (docRows ?? []).map((d) => d.file_path));
+  const documents: DocumentItem[] = (docRows ?? []).map((d) => ({
+    id: d.id, name: d.name, type: d.type, expiry: d.expiry, related: d.related, note: d.note,
+    fileUrl: (d.file_path && urls.get(d.file_path)) || null,
+  }));
 
   return <DocsClient documents={documents} todayISO={todayISO} />;
 }

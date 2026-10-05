@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { signedUrl } from "@/lib/supabase/storage";
+import { signedUrls } from "@/lib/supabase/storage";
 import { todayISOInBangkok } from "@/lib/dates/today";
 import { AssetsClient, type AssetItem } from "@/components/assets/assets-client";
 
@@ -13,13 +13,12 @@ export default async function AssetsPage() {
     supabase.from("documents").select("id, name, type, expiry, related"),
   ]);
 
-  const assets: AssetItem[] = await Promise.all(
-    (assetRows ?? []).map(async (a) => ({
+  const urls = await signedUrls(supabase, (assetRows ?? []).map((a) => a.receipt_path));
+  const assets: AssetItem[] = (assetRows ?? []).map((a) => ({
       id: a.id, name: a.name, kind: a.kind, brand: a.brand, model: a.model, serial: a.serial,
       price: a.price, purchasedOn: a.purchased_on, store: a.store, warrantyUntil: a.warranty_until,
-      note: a.note, sold: a.sold, receiptUrl: await signedUrl(supabase, a.receipt_path),
-    })),
-  );
+      note: a.note, sold: a.sold, receiptUrl: (a.receipt_path && urls.get(a.receipt_path)) || null,
+  }));
 
   const accounts = (accountRows ?? []).filter((a): a is { id: string; name: string } => !!a.id && !!a.name);
   const documents = (docRows ?? []).map((d) => ({ id: d.id, name: d.name, type: d.type, expiry: d.expiry, related: d.related }));

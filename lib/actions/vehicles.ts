@@ -101,6 +101,7 @@ export async function deleteVehicle(id: string): Promise<{ error?: string }> {
 
 /** Called after a service/fuel entry sets a higher odometer reading than the vehicle's stored mileage. */
 export async function bumpVehicleMileage(id: string, mileage: number): Promise<void> {
+  if (!z.string().uuid().safeParse(id).success || !Number.isInteger(mileage) || mileage < 0) return;
   const supabase = await createClient();
   const { data: v } = await supabase.from("vehicles").select("mileage").eq("id", id).single();
   if (v && mileage > v.mileage) {

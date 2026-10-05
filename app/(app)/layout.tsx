@@ -4,15 +4,14 @@ import { ToastProvider } from "@/components/providers/toast-provider";
 import { QuickAddProvider } from "@/components/providers/quick-add-provider";
 import { PinLockGate } from "@/components/providers/pin-lock-gate";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser, getProfilePrefs } from "@/lib/server/session";
 import { getNotificationItems } from "@/lib/server/notifications";
 import { openNotiCount } from "@/lib/domain/notifications";
 import type { TripPerson } from "@/components/ui/avatar";
 
 export default async function AppGroupLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   let hide = false;
   let theme: "light" | "dark" = "light";
@@ -25,15 +24,15 @@ export default async function AppGroupLayout({ children }: { children: React.Rea
   let notiCount = 0;
 
   if (user) {
-    const [{ data: profile }, { data: accountRows }, { data: cardRows }, { data: vehicleRows }, { data: friendRows }, items] = await Promise.all([
-      supabase.from("profiles").select("prefs").eq("user_id", user.id).single(),
+    const [profilePrefs, { data: accountRows }, { data: cardRows }, { data: vehicleRows }, { data: friendRows }, items] = await Promise.all([
+      getProfilePrefs(),
       supabase.from("accounts").select("id, name").eq("archived", false).order("pinned", { ascending: false }).order("sort"),
       supabase.from("cards").select("id, name").eq("archived", false).order("pinned", { ascending: false }).order("sort"),
       supabase.from("vehicles").select("id, brand, model, mileage"),
       supabase.from("friends").select("id, name, color"),
       getNotificationItems(supabase),
     ]);
-    const prefs = (profile?.prefs as { hide?: boolean; theme?: string; motion?: string; pin?: string } | null) ?? {};
+    const prefs = (profilePrefs as { hide?: boolean; theme?: string; motion?: string; pin?: string } | null) ?? {};
     hide = Boolean(prefs.hide);
     theme = prefs.theme === "dark" ? "dark" : "light";
     motion = prefs.motion === "off" ? "off" : "on";

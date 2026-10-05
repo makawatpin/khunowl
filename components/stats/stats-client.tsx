@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Money } from "@/components/ui/money";
+import { usePrefs } from "@/components/providers/prefs-provider";
 import { Icon } from "@/components/ui/icon";
 import { categoryColor } from "@/lib/domain/categories";
 import { dShort } from "@/lib/format/date";
@@ -26,11 +27,15 @@ export function StatsClient({
   todayISO,
   txns,
   budgets,
+  minMonth,
 }: {
   todayISO: string;
   txns: TxnWithId[];
   budgets: Record<string, number>;
+  minMonth: string;
 }) {
+  const { hide } = usePrefs();
+  const baht = (n: number) => (hide ? "฿ •••" : `${Math.round(n).toLocaleString()} บาท`);
   const curMonth = todayISO.slice(0, 7);
   const [mk, setMk] = useState(curMonth);
   const [day, setDay] = useState<number | null>(null);
@@ -95,7 +100,7 @@ export function StatsClient({
   return (
     <>
       <div className="st-month">
-        <button className="btn icon-btn" onClick={() => go(-1)} aria-label="เดือนก่อน"><Icon name="back" size={16} /></button>
+        <button className="btn icon-btn" onClick={() => go(-1)} disabled={mk <= minMonth} aria-label="เดือนก่อน"><Icon name="back" size={16} /></button>
         <b>{MONTHS_TH[month - 1]} {year}</b>
         <button className="btn icon-btn" onClick={() => go(1)} disabled={mk >= curMonth} aria-label="เดือนถัดไป"><Icon name="arrow" size={16} /></button>
         {!isCur && (
@@ -111,8 +116,8 @@ export function StatsClient({
             {perDay == null
               ? "ตั้งงบรายหมวดในหน้าตั้งค่าเพื่อดูงบที่ใช้ได้ต่อวัน"
               : todaySpend <= perDay
-                ? `วันนี้ยังใช้ได้อีก ${Math.round(perDay - todaySpend).toLocaleString()} บาท`
-                : `วันนี้เกินงบรายวันไป ${Math.round(todaySpend - perDay).toLocaleString()} บาท`}
+                ? `วันนี้ยังใช้ได้อีก ${baht(perDay - todaySpend)}`
+                : `วันนี้เกินงบรายวันไป ${baht(todaySpend - perDay)}`}
           </div>
           <div style={{ display: "flex", gap: 18, marginTop: 20, paddingTop: 16, borderTop: "1px solid rgba(255,255,255,.28)" }}>
             <div style={{ flex: 1 }}><div className="cap">ใช้ได้วันละ</div><div className="num" style={{ fontSize: 18, fontWeight: 600 }}>{perDay == null ? "—" : <Money value={perDay} />}</div></div>
@@ -124,7 +129,7 @@ export function StatsClient({
         <div className="hero">
           <div className="cap">ใช้จ่ายทั้งเดือน {MONTHS_TH[month - 1]}</div>
           <div className="num" style={{ fontSize: 40, fontWeight: 600, lineHeight: 1.1, margin: "6px 0 2px" }}><Money value={E} /></div>
-          <div style={{ fontSize: 13.5, color: "rgba(255,255,255,.85)" }}>เฉลี่ยวันละ {Math.round(avgDay).toLocaleString()} บาท</div>
+          <div style={{ fontSize: 13.5, color: "rgba(255,255,255,.85)" }}>เฉลี่ยวันละ {baht(avgDay)}</div>
           <div style={{ display: "flex", gap: 18, marginTop: 20, paddingTop: 16, borderTop: "1px solid rgba(255,255,255,.28)" }}>
             <div style={{ flex: 1 }}><div className="cap">รายรับ</div><div className="num" style={{ fontSize: 18, fontWeight: 600 }}><Money value={I} /></div></div>
             <div style={{ flex: 1 }}><div className="cap">คงเหลือสุทธิ</div><div className="num" style={{ fontSize: 18, fontWeight: 600 }}><Money value={I - E} /></div></div>
@@ -147,7 +152,7 @@ export function StatsClient({
         <div className="card card-pad">
           <div className="cap">คงเหลือสุทธิ</div>
           <div className="num" style={{ fontSize: 22, fontWeight: 600, marginTop: 6, color: I - E < 0 ? "var(--neg)" : "var(--pos)" }}><Money value={I - E} /></div>
-          <div className="row-s">เฉลี่ยใช้วันละ {Math.round(avgDay).toLocaleString()} บาท</div>
+          <div className="row-s">เฉลี่ยใช้วันละ {baht(avgDay)}</div>
         </div>
       </div>
 
@@ -180,7 +185,7 @@ export function StatsClient({
               })}
             </div>
             <div className="hint">
-              สียิ่งเข้มยิ่งใช้เยอะ · วันที่ใช้มากสุด {maxDayEntry ? `${maxDayEntry[0]} ${M_TH[month - 1]} (${Math.round(maxDayEntry[1]).toLocaleString()} บาท)` : "—"}
+              สียิ่งเข้มยิ่งใช้เยอะ · วันที่ใช้มากสุด {maxDayEntry ? `${maxDayEntry[0]} ${M_TH[month - 1]} (${baht(maxDayEntry[1])})` : "—"}
             </div>
           </div>
           <div className="sec">

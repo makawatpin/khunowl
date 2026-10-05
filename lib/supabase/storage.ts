@@ -21,6 +21,7 @@ export async function uploadFile(
   kind: UploadKind,
   file: File,
 ): Promise<{ path?: string; error?: string }> {
+  if (!file.type.startsWith("image/") && file.type !== "application/pdf") return { error: "รองรับเฉพาะรูปภาพหรือ PDF" };
   const maxBytes = kind === "docs" ? MAX_DOC_BYTES : MAX_IMAGE_BYTES;
   if (file.size > maxBytes) return { error: `ไฟล์ใหญ่เกินไป (จำกัด ${Math.round(maxBytes / 1024 / 1024)}MB)` };
 
@@ -33,6 +34,21 @@ export async function uploadFile(
 export async function removeFile(supabase: SupabaseClient<Database>, path: string | null | undefined): Promise<void> {
   if (!path) return;
   await supabase.storage.from(BUCKET).remove([path]);
+}
+
+/** Batch version of signedUrl(): one HTTP call for all paths. Returns a path → URL map (null/failed paths are omitted). */
+export async function signedUrls(
+  supabase: SupabaseClient<Database>,
+  paths: (string | null | undefined)[],
+  expiresIn = 3600,
+): Promise<Map<string, string>> {
+  const unique = [...new Set(paths.filter((p): p is string => !!p))];
+  const out = new Map<string, string>();
+  if (!unique.length) return out;
+  const { data, error } = await supabase.storage.from(BUCKET).createSignedUrls(unique, expiresIn);
+  if (error || !data) return out;
+  for (const row of data) if (row.path && row.signedUrl) out.set(row.path, row.signedUrl);
+  return out;
 }
 
 export async function signedUrl(supabase: SupabaseClient<Database>, path: string | null | undefined, expiresIn = 3600): Promise<string | null> {

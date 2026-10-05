@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { FormModal, Field } from "@/components/ui/form-modal";
 import { Avatar, PersonChip, type TripPerson } from "@/components/ui/avatar";
+import { usePrefs } from "@/components/providers/prefs-provider";
 import { Icon } from "@/components/ui/icon";
 import { createTripExpense, deleteTripExpense, updateTripExpense } from "@/lib/actions/trip-expenses";
 import { fmtC, TRIP_CATEGORIES, type SplitMode } from "@/lib/domain/trips";
@@ -60,6 +61,7 @@ export function TripExpenseForm({
   initial?: TripExpenseFormInitial;
   onClose: () => void;
 }) {
+  const { hide } = usePrefs();
   const router = useRouter();
   const { show } = useToast();
   const memberIds = members.map((m) => m.id);
@@ -184,11 +186,11 @@ export function TripExpenseForm({
       ) : (
         <div style={{ marginBottom: 14 }}>
           <div className="cap">ยอดรวมทุกรายการ</div>
-          <div style={{ fontSize: 26, fontWeight: 600 }}>{fmtC(amt, currency)}</div>
+          <div style={{ fontSize: 26, fontWeight: 600 }}>{fmtC(amt, currency, hide)}</div>
         </div>
       )}
       {currency !== "THB" && amt > 0 && (
-        <div className="hint" style={{ margin: "-8px 2px 14px" }}>≈ {fmtC(amt * rate, "THB")} (1 {currency} = ฿{rate})</div>
+        <div className="hint" style={{ margin: "-8px 2px 14px" }}>≈ {fmtC(amt * rate, "THB", hide)} (1 {currency} = ฿{rate})</div>
       )}
       <Field label="รายละเอียด">
         <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={category} />
@@ -208,7 +210,7 @@ export function TripExpenseForm({
         </div>
       </Field>
       {mode === "equal" && (
-        <Field label={`หารกับใคร · คนละ ${split.length && amt ? fmtC(amt / split.length, currency) : "—"}`}>
+        <Field label={`หารกับใคร · คนละ ${split.length && amt ? fmtC(amt / split.length, currency, hide) : "—"}`}>
           <div className="chips">
             {members.map((p) => (
               <PersonChip key={p.id} person={p} on={split.includes(p.id)} onClick={() => setSplit((s) => toggle(s, p.id))} />
@@ -237,7 +239,7 @@ export function TripExpenseForm({
                 </div>
                 {parseFloat(l.price) > 0 && (
                   <div className="hint" style={{ marginTop: 8, color: l.people.length ? undefined : "var(--neg)" }}>
-                    {l.people.length ? `คนละ ${fmtC(parseFloat(l.price) / l.people.length, currency)}` : "เลือกอย่างน้อย 1 คน"}
+                    {l.people.length ? `คนละ ${fmtC(parseFloat(l.price) / l.people.length, currency, hide)}` : "เลือกอย่างน้อย 1 คน"}
                   </div>
                 )}
               </div>
@@ -261,7 +263,7 @@ export function TripExpenseForm({
             ))}
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 2 }}>
               <span className="hint" style={{ margin: 0, flex: 1, color: okRemain && amt ? "var(--pos)" : "var(--neg)" }}>
-                {!amt ? "ใส่จำนวนเงินก่อน" : okRemain ? "ยอดรวมตรงกันแล้ว" : remain > 0 ? `ยังขาดอีก ${fmtC(remain, currency)}` : `เกินมา ${fmtC(-remain, currency)}`}
+                {!amt ? "ใส่จำนวนเงินก่อน" : okRemain ? "ยอดรวมตรงกันแล้ว" : remain > 0 ? `ยังขาดอีก ${fmtC(remain, currency, hide)}` : `เกินมา ${fmtC(-remain, currency, hide)}`}
               </span>
               <button type="button" className="btn btn-sm" onClick={evenShares} disabled={!amt}>แบ่งเท่ากัน</button>
             </div>

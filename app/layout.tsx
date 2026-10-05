@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Anuphan } from "next/font/google";
-import { createClient } from "@/lib/supabase/server";
+import { getProfilePrefs } from "@/lib/server/session";
 import "./globals.css";
 
 const anuphan = Anuphan({
@@ -36,11 +36,8 @@ async function readThemePrefs(): Promise<{ theme: "light" | "dark"; motion: "on"
     return { theme: "light", motion: "on" };
   }
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { theme: "light", motion: "on" };
-    const { data: profile } = await supabase.from("profiles").select("prefs").eq("user_id", user.id).single();
-    const prefs = (profile?.prefs as { theme?: string; motion?: string } | null) ?? {};
+    const prefs = (await getProfilePrefs()) as { theme?: string; motion?: string } | null;
+    if (!prefs) return { theme: "light", motion: "on" };
     return { theme: prefs.theme === "dark" ? "dark" : "light", motion: prefs.motion === "off" ? "off" : "on" };
   } catch {
     return { theme: "light", motion: "on" };

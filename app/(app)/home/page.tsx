@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { signedUrl } from "@/lib/supabase/storage";
+import { signedUrls } from "@/lib/supabase/storage";
 import { todayISOInBangkok } from "@/lib/dates/today";
 import { HomeClient, type ApplianceItem, type HomeBillItem } from "@/components/home/home-client";
 import type { ProjectDetailData } from "@/components/home/project-detail-client";
@@ -37,13 +37,16 @@ export default async function HomePage() {
     id: h.id, name: h.name, everyMonths: h.every_months, lastDone: h.last_done, nextDue: h.next_due, cost: h.cost,
   }));
 
-  const appliances: ApplianceItem[] = await Promise.all(
-    (assetRows ?? []).map(async (a) => ({
+  const urls = await signedUrls(supabase, [
+    ...(assetRows ?? []).map((a) => a.receipt_path),
+    ...(billsOfProjectRows ?? []).map((b) => b.attachment_path),
+  ]);
+
+  const appliances: ApplianceItem[] = (assetRows ?? []).map((a) => ({
       id: a.id, name: a.name, kind: a.kind, brand: a.brand, model: a.model, serial: a.serial,
       price: a.price, purchasedOn: a.purchased_on, store: a.store, warrantyUntil: a.warranty_until,
-      note: a.note, sold: a.sold, receiptUrl: await signedUrl(supabase, a.receipt_path),
-    })),
-  );
+      note: a.note, sold: a.sold, receiptUrl: (a.receipt_path && urls.get(a.receipt_path)) || null,
+  }));
 
   const homeBills: HomeBillItem[] = (billRows ?? [])
     .filter((b) => HOME_BILL_RE.test(b.name))
@@ -56,19 +59,15 @@ export default async function HomePage() {
     billsByProject.set(b.project_id, list);
   }
 
-  const projects: ProjectDetailData[] = await Promise.all(
-    (projectRows ?? []).map(async (p) => ({
+  const projects: ProjectDetailData[] = (projectRows ?? []).map((p) => ({
       id: p.id, name: p.name, kind: p.kind, status: p.status, startOn: p.start_on, endOn: p.end_on,
       budget: p.budget, note: p.note, phases: p.phases,
-      bills: await Promise.all(
-        (billsByProject.get(p.id) ?? []).map(async (b) => ({
-          id: b.id, date: b.date, shop: b.shop, phase: b.phase, note: b.note,
-          items: (b.items as { name: string; qty: number; price: number }[]) ?? [],
-          attachmentUrl: await signedUrl(supabase, b.attachment_path),
-        })),
-      ),
-    })),
-  );
+      bills: (billsByProject.get(p.id) ?? []).map((b) => ({
+        id: b.id, date: b.date, shop: b.shop, phase: b.phase, note: b.note,
+        items: (b.items as { name: string; qty: number; price: number }[]) ?? [],
+        attachmentUrl: (b.attachment_path && urls.get(b.attachment_path)) || null,
+      })),
+    }));
 
   const accounts = (accountRows ?? []).filter((a): a is { id: string; name: string } => !!a.id && !!a.name);
 

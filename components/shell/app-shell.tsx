@@ -29,6 +29,7 @@ export function AppShell({ children, notiCount = 0 }: { children: React.ReactNod
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
   const [mSearch, setMSearch] = useState(false);
+  const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href + "/"));
   const title = PAGE_TITLES[pathname] ?? "";
   const moreActive = !MAIN_MOBILE_ROUTES.includes(pathname) && pathname !== "/settings";
   const { hide, toggleHide } = usePrefs();
@@ -49,7 +50,7 @@ export function AppShell({ children, notiCount = 0 }: { children: React.ReactNod
               <Link
                 key={it.href}
                 href={it.href}
-                className={"side-item" + (pathname === it.href ? " on" : "")}
+                className={"side-item" + (isActive(it.href) ? " on" : "")}
                 title={it.label}
               >
                 <Icon name={it.icon} size={18} />
@@ -71,7 +72,7 @@ export function AppShell({ children, notiCount = 0 }: { children: React.ReactNod
           </button>
           <Link
             href={SETTINGS_ITEM.href}
-            className={"side-item" + (pathname === SETTINGS_ITEM.href ? " on" : "")}
+            className={"side-item" + (isActive(SETTINGS_ITEM.href) ? " on" : "")}
             title={SETTINGS_ITEM.label}
           >
             <Icon name={SETTINGS_ITEM.icon} size={18} />
@@ -138,7 +139,7 @@ export function AppShell({ children, notiCount = 0 }: { children: React.ReactNod
               {notiCount > 0 && <span className="nav-dot" />}
             </button>
           ) : (
-            <Link key={t.href} href={t.href} className={pathname === t.href ? "on" : ""}>
+            <Link key={t.href} href={t.href} className={isActive(t.href) ? "on" : ""}>
               <Icon name={t.icon} size={20} />
               {t.label}
             </Link>
@@ -168,7 +169,7 @@ export function AppShell({ children, notiCount = 0 }: { children: React.ReactNod
                         <Link
                           key={it.href}
                           href={it.href}
-                          className={"more-item" + (pathname === it.href ? " on" : "")}
+                          className={"more-item" + (isActive(it.href) ? " on" : "")}
                           onClick={() => setMoreOpen(false)}
                         >
                           <Icon name={it.icon} size={20} />
@@ -186,7 +187,7 @@ export function AppShell({ children, notiCount = 0 }: { children: React.ReactNod
                 <div className="more-grid">
                   <Link
                     href={SETTINGS_ITEM.href}
-                    className={"more-item" + (pathname === SETTINGS_ITEM.href ? " on" : "")}
+                    className={"more-item" + (isActive(SETTINGS_ITEM.href) ? " on" : "")}
                     onClick={() => setMoreOpen(false)}
                   >
                     <Icon name={SETTINGS_ITEM.icon} size={20} />

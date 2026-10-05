@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { FormModal, Field, FieldGrid } from "@/components/ui/form-modal";
 import { Avatar, type TripPerson } from "@/components/ui/avatar";
+import { usePrefs } from "@/components/providers/prefs-provider";
 import { Icon } from "@/components/ui/icon";
 import { createTripSettlement } from "@/lib/actions/trip-settlements";
 import { fmtC } from "@/lib/domain/trips";
@@ -31,6 +32,7 @@ export function TripSettleForm({
   accounts: { id: string; name: string }[];
   onClose: () => void;
 }) {
+  const { hide } = usePrefs();
   const router = useRouter();
   const { show } = useToast();
   const [amt, setAmt] = useState(String(amount));
@@ -86,7 +88,7 @@ export function TripSettleForm({
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         </Field>
       </FieldGrid>
-      {currency !== "THB" && <div className="hint" style={{ margin: "-6px 2px 14px" }}>≈ {fmtC(thb, "THB")}</div>}
+      {currency !== "THB" && <div className="hint" style={{ margin: "-6px 2px 14px" }}>≈ {fmtC(thb, "THB", hide)}</div>}
       {mine && (
         <Field label={from.id === meId ? "บันทึกเป็นรายจ่ายจากบัญชี" : "บันทึกเป็นรายรับเข้าบัญชี"}>
           <select value={paySrc} onChange={(e) => setPaySrc(e.target.value)}>

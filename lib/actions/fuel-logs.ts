@@ -50,11 +50,16 @@ export async function createFuelLog(vehicleId: string, formData: FormData): Prom
   if (paySrc) {
     const { data: vehicle } = await supabase.from("vehicles").select("brand, model").eq("id", vehicleId).single();
     const vehicleName = [vehicle?.brand, vehicle?.model].filter(Boolean).join(" ");
-    await supabase.from("transactions").insert({
+    const { error: txnError } = await supabase.from("transactions").insert({
       type: "expense", amount: d.total, name: `เติมน้ำมัน ${vehicleName}`.trim(), category: "รถ", date: d.date,
       src_account_id: paySrcKind === "account" ? paySrc : null,
       src_card_id: paySrcKind === "card" ? paySrc : null,
     });
+    if (txnError) {
+      await bumpVehicleMileage(vehicleId, d.mileage);
+      revalidateVehiclePages();
+      return { error: `บันทึกเติมน้ำมันแล้ว แต่สร้างรายการเงินไม่สำเร็จ: ${txnError.message}` };
+    }
   }
 
   await bumpVehicleMileage(vehicleId, d.mileage);

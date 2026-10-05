@@ -15,13 +15,15 @@ export function ProcessDueTrigger() {
   useEffect(() => {
     if (ran.current) return;
     ran.current = true;
-    processDueForCurrentUser().then((result) => {
-      const n = result.billsProcessed + result.subsProcessed;
-      if (n > 0) {
-        router.refresh();
-        show(`ตัดบิล/สมาชิกอัตโนมัติ ${n} รายการ`);
-      }
-    });
+    processDueForCurrentUser()
+      .then((result) => {
+        const n = result.billsProcessed + result.subsProcessed;
+        if (n > 0) {
+          router.refresh();
+          show(`ตัดบิล/สมาชิกอัตโนมัติ ${n} รายการ`);
+        }
+      })
+      .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

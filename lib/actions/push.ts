@@ -1,6 +1,13 @@
 "use server";
 
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+
+const subscriptionSchema = z.object({
+  endpoint: z.string().url().max(2048),
+  p256dh: z.string().min(1).max(200),
+  auth: z.string().min(1).max(100),
+});
 
 async function setNotifyPref(notify: boolean) {
   const supabase = await createClient();
@@ -12,6 +19,8 @@ async function setNotifyPref(notify: boolean) {
 }
 
 export async function savePushSubscription(sub: { endpoint: string; p256dh: string; auth: string }): Promise<{ error?: string }> {
+  const parsedSub = subscriptionSchema.safeParse(sub);
+  if (!parsedSub.success) return { error: "ข้อมูลการแจ้งเตือนไม่ถูกต้อง" };
   const supabase = await createClient();
   const { error } = await supabase
     .from("push_subscriptions")
@@ -22,6 +31,7 @@ export async function savePushSubscription(sub: { endpoint: string; p256dh: stri
 }
 
 export async function deletePushSubscription(endpoint: string): Promise<{ error?: string }> {
+  if (!z.string().url().max(2048).safeParse(endpoint).success) return { error: "ข้อมูลการแจ้งเตือนไม่ถูกต้อง" };
   const supabase = await createClient();
   const { error } = await supabase.from("push_subscriptions").delete().eq("endpoint", endpoint);
   if (error) return { error: error.message };

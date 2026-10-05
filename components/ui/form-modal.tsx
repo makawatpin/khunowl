@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useId, useState } from "react";
 import { Icon } from "@/components/ui/icon";
 
 export function FormModal({
@@ -21,11 +22,37 @@ export function FormModal({
   saveLabel?: string;
   children: React.ReactNode;
 }) {
+  const titleId = useId();
+  const [confirming, setConfirming] = useState(false);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  useEffect(() => {
+    if (!confirming) return;
+    const t = setTimeout(() => setConfirming(false), 4000);
+    return () => clearTimeout(t);
+  }, [confirming]);
+
+  const handleDelete = () => {
+    if (!confirming) {
+      setConfirming(true);
+      return;
+    }
+    setConfirming(false);
+    onDelete?.();
+  };
+
   return (
     <div className="backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal">
+      <div className="modal" role="dialog" aria-modal="true" aria-labelledby={titleId}>
         <div className="modal-head">
-          <h3 style={{ flex: 1 }}>{title}</h3>
+          <h3 id={titleId} style={{ flex: 1 }}>{title}</h3>
           <button className="btn" onClick={onClose} style={{ padding: "6px 9px" }} aria-label="ปิด">
             <Icon name="x" size={16} />
           </button>
@@ -33,9 +60,9 @@ export function FormModal({
         <div className="modal-body">{children}</div>
         <div style={{ padding: "0 18px 18px", display: "flex", gap: 8 }}>
           {onDelete && (
-            <button type="button" className="btn btn-danger" onClick={onDelete} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <button type="button" className="btn btn-danger" onClick={handleDelete} style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <Icon name="trash" size={15} />
-              ลบ
+              {confirming ? "ยืนยันลบ?" : "ลบ"}
             </button>
           )}
           <button type="button" className="btn" onClick={onClose}>

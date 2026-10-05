@@ -9,6 +9,8 @@ const BACKUP_TABLES = [
   "trip_expenses", "trip_expense_items", "trip_expense_shares", "trip_settlements",
 ] as const;
 
+const PAGE_SIZE = 1000;
+
 /** A full dump of every user-owned row, keyed by table name — this app's own backup shape
  * (not the prototype's legacy format; see `importLegacy` for reading that one back in). */
 export async function exportBackupJSON(): Promise<{ data?: object; error?: string }> {
@@ -18,9 +20,18 @@ export async function exportBackupJSON(): Promise<{ data?: object; error?: strin
 
   const tables: Record<string, unknown[]> = {};
   for (const table of BACKUP_TABLES) {
-    const { data, error } = await supabase.from(table).select("*");
-    if (error) return { error: error.message };
-    tables[table] = data ?? [];
+    const rows: unknown[] = [];
+    for (let from = 0; ; from += PAGE_SIZE) {
+      let query = supabase.from(table).select("*");
+      if (table === "budgets") query = query.order("category");
+      else if (table === "trip_expense_shares") query = query.order("expense_id").order("member_id");
+      else query = query.order("id");
+      const { data, error } = await query.range(from, from + PAGE_SIZE - 1);
+      if (error) return { error: error.message };
+      rows.push(...(data ?? []));
+      if (!data || data.length < PAGE_SIZE) break;
+    }
+    tables[table] = rows;
   }
 
   return { data: { app: "KhunOwl", version: 2, exportedAt: new Date().toISOString(), tables } };

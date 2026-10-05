@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { usePrefs } from "@/components/providers/prefs-provider";
 import { Icon } from "@/components/ui/icon";
 import { AvatarStack, type TripPerson } from "@/components/ui/avatar";
 import { Money } from "@/components/ui/money";
@@ -25,6 +26,7 @@ export interface TripListItem {
 }
 
 export function TripsClient({ trips, friends }: { trips: TripListItem[]; friends: TripPerson[] }) {
+  const { hide } = usePrefs();
   const router = useRouter();
   const todayISO = todayISOInBangkok();
   const [newTripForm, setNewTripForm] = useState(false);
@@ -74,13 +76,13 @@ export function TripsClient({ trips, friends }: { trips: TripListItem[]; friends
               <span className="trip-card-mid">
                 <span>
                   <span className="cap">ใช้ทั้งทริป</span>
-                  <span style={{ display: "block", fontSize: 22, fontWeight: 600 }}>{fmtC(t.total, t.currency)}</span>
+                  <span style={{ display: "block", fontSize: 22, fontWeight: 600 }}>{fmtC(t.total, t.currency, hide)}</span>
                   {foreign && <span className="row-s num">≈ <Money value={t.total * t.rate} /></span>}
                 </span>
                 {Math.abs(me) > 0.01 ? (
                   <span style={{ textAlign: "right" }}>
                     <span className="cap">{me > 0 ? "ฉันได้คืน" : "ฉันต้องจ่าย"}</span>
-                    <span style={{ display: "block", fontSize: 16, fontWeight: 600, color: me > 0 ? "var(--pos)" : "var(--neg)" }}>{fmtC(Math.abs(me), t.currency)}</span>
+                    <span style={{ display: "block", fontSize: 16, fontWeight: 600, color: me > 0 ? "var(--pos)" : "var(--neg)" }}>{fmtC(Math.abs(me), t.currency, hide)}</span>
                   </span>
                 ) : (
                   t.hasExpenses && <span className="badge green">เคลียร์ครบ</span>

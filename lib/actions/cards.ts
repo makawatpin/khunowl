@@ -116,7 +116,9 @@ export async function payCard(
   amount: number,
   fromAccountId: string,
 ): Promise<{ txnId?: string; prevDueDate?: string | null; prevStatementDate?: string | null; error?: string }> {
-  if (amount <= 0) return { error: "ระบุจำนวนเงินให้ถูกต้อง" };
+  if (!Number.isFinite(amount) || amount <= 0) return { error: "ระบุจำนวนเงินให้ถูกต้อง" };
+  const ids = z.string().uuid();
+  if (!ids.safeParse(cardId).success || !ids.safeParse(fromAccountId).success) return { error: "ข้อมูลไม่ถูกต้อง" };
   const supabase = await createClient();
 
   const { data: card, error: cardErr } = await supabase
