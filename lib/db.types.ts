@@ -358,6 +358,7 @@ export type Database = {
         Row: {
           created_at: string
           date: string
+          energy: string
           id: string
           liters: number
           mileage: number
@@ -369,6 +370,7 @@ export type Database = {
         Insert: {
           created_at?: string
           date: string
+          energy?: string
           id?: string
           liters: number
           mileage: number
@@ -380,6 +382,7 @@ export type Database = {
         Update: {
           created_at?: string
           date?: string
+          energy?: string
           id?: string
           liters?: number
           mileage?: number

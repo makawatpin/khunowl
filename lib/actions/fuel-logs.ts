@@ -17,6 +17,7 @@ const fuelSchema = z.object({
   liters: z.coerce.number().nonnegative().optional(),
   pricePerL: z.coerce.number().nonnegative().optional(),
   total: zPositiveMoney,
+  energy: z.enum(["fuel", "ev"]).default("fuel"),
 });
 
 export async function createFuelLog(vehicleId: string, formData: FormData): Promise<{ id?: string; error?: string }> {
@@ -32,15 +33,17 @@ export async function createFuelLog(vehicleId: string, formData: FormData): Prom
     liters: resolvedLiters,
     pricePerL: resolvedPricePerL,
     total: formData.get("total"),
+    energy: formData.get("energy") || "fuel",
   });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const d = parsed.data;
-  if (!d.liters) return { error: "ระบุลิตรหรือราคา/ลิตร" };
+  const isEv = d.energy === "ev";
+  if (!d.liters) return { error: isEv ? "ระบุ kWh หรือราคา/kWh" : "ระบุลิตรหรือราคา/ลิตร" };
 
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("fuel_logs")
-    .insert({ vehicle_id: vehicleId, date: d.date, mileage: d.mileage, liters: Math.round(d.liters * 10) / 10, price_per_l: d.pricePerL ?? null, total: d.total })
+    .insert({ vehicle_id: vehicleId, date: d.date, mileage: d.mileage, liters: Math.round(d.liters * 10) / 10, price_per_l: d.pricePerL ?? null, total: d.total, energy: d.energy })
     .select("id")
     .single();
   if (error) return { error: error.message };
@@ -51,14 +54,14 @@ export async function createFuelLog(vehicleId: string, formData: FormData): Prom
     const { data: vehicle } = await supabase.from("vehicles").select("brand, model").eq("id", vehicleId).single();
     const vehicleName = [vehicle?.brand, vehicle?.model].filter(Boolean).join(" ");
     const { error: txnError } = await supabase.from("transactions").insert({
-      type: "expense", amount: d.total, name: `เติมน้ำมัน ${vehicleName}`.trim(), category: "รถ", date: d.date,
+      type: "expense", amount: d.total, name: `${isEv ? "ชาร์จไฟ" : "เติมน้ำมัน"} ${vehicleName}`.trim(), category: "รถ", date: d.date,
       src_account_id: paySrcKind === "account" ? paySrc : null,
       src_card_id: paySrcKind === "card" ? paySrc : null,
     });
     if (txnError) {
       await bumpVehicleMileage(vehicleId, d.mileage);
       revalidateVehiclePages();
-      return { error: `บันทึกเติมน้ำมันแล้ว แต่สร้างรายการเงินไม่สำเร็จ: ${txnError.message}` };
+      return { error: `${isEv ? "บันทึกชาร์จไฟ" : "บันทึกเติมน้ำมัน"}แล้ว แต่สร้างรายการเงินไม่สำเร็จ: ${txnError.message}` };
     }
   }
 

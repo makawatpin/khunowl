@@ -6,11 +6,14 @@ import { FormModal, Field, FieldGrid } from "@/components/ui/form-modal";
 import { createFuelLog } from "@/lib/actions/fuel-logs";
 import { useToast } from "@/components/providers/toast-provider";
 import { todayISOInBangkok } from "@/lib/dates/today";
+import { ENERGY_UNIT, type Energy } from "@/lib/domain/vehicle";
 
 export interface VehiclePickItem {
   id: string;
   name: string;
   mileage: number;
+  /** Energy of the vehicle's most recent log; preselects the toggle. */
+  defaultEnergy?: Energy;
 }
 
 export function FuelLogForm({
@@ -30,6 +33,9 @@ export function FuelLogForm({
   const { show } = useToast();
   const [vehicleId, setVehicleId] = useState(defaultVehicleId);
   const vehicle = vehicles.find((v) => v.id === vehicleId) ?? vehicles[0];
+  const [energy, setEnergy] = useState<Energy>(vehicle?.defaultEnergy ?? "fuel");
+  const isEv = energy === "ev";
+  const unit = ENERGY_UNIT[energy];
   const [date, setDate] = useState(todayISOInBangkok());
   const [mileage, setMileage] = useState(String(vehicle?.mileage ?? ""));
   const [liters, setLiters] = useState("");
@@ -59,6 +65,7 @@ export function FuelLogForm({
     fd.set("liters", liters);
     fd.set("pricePerL", pricePerL);
     fd.set("total", total || String(computedTotal));
+    fd.set("energy", energy);
     if (paySrc) {
       fd.set("paySrc", paySrc);
       fd.set("paySrcKind", cards.some((c) => c.id === paySrc) ? "card" : "account");
@@ -71,15 +78,27 @@ export function FuelLogForm({
     }
     onClose();
     router.refresh();
-    show(`บันทึกเติมน้ำมัน ${computedTotal.toLocaleString()} บาทแล้ว`);
+    show(`${isEv ? "บันทึกชาร์จไฟ" : "บันทึกเติมน้ำมัน"} ${computedTotal.toLocaleString()} บาทแล้ว`);
   };
 
   return (
-    <FormModal title="บันทึกเติมน้ำมัน" onClose={onClose} onSave={handleSave} valid={valid} pending={pending}>
+    <FormModal title={isEv ? "บันทึกชาร์จไฟ" : "บันทึกเติมน้ำมัน"} onClose={onClose} onSave={handleSave} valid={valid} pending={pending}>
       {error && <div className="hint" style={{ color: "var(--neg)" }}>{error}</div>}
+      <div className="tabs">
+        <button type="button" className={!isEv ? "on" : ""} onClick={() => setEnergy("fuel")}>น้ำมัน</button>
+        <button type="button" className={isEv ? "on" : ""} onClick={() => setEnergy("ev")}>ชาร์จไฟ (EV)</button>
+      </div>
       {vehicles.length > 1 && (
         <Field label="รถ">
-          <select value={vehicleId} onChange={(e) => { setVehicleId(e.target.value); setMileage(String(vehicles.find((v) => v.id === e.target.value)?.mileage ?? "")); }}>
+          <select
+            value={vehicleId}
+            onChange={(e) => {
+              const next = vehicles.find((v) => v.id === e.target.value);
+              setVehicleId(e.target.value);
+              setMileage(String(next?.mileage ?? ""));
+              if (next?.defaultEnergy) setEnergy(next.defaultEnergy);
+            }}
+          >
             {vehicles.map((v) => (
               <option key={v.id} value={v.id}>{v.name}</option>
             ))}
@@ -93,10 +112,10 @@ export function FuelLogForm({
         <Field label="วันที่">
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         </Field>
-        <Field label="ลิตร">
+        <Field label={unit}>
           <input value={liters} onChange={(e) => setLiters(e.target.value)} inputMode="decimal" />
         </Field>
-        <Field label="ราคา/ลิตร">
+        <Field label={`ราคา/${unit}`}>
           <input value={pricePerL} onChange={(e) => setPricePerL(e.target.value)} inputMode="decimal" />
         </Field>
       </FieldGrid>

@@ -174,3 +174,12 @@ On phones the bottom nav looked broken: `.botnav` styles were written for `butto
 - `updateTrip` refuses to remove a member who is a payer / has shares / is in an itemized line / has a settlement (server-side; the DB FK now also blocks the share case). The guard's PostgREST queries passed typecheck but were **not exercised live** (dev server was down) — click-test "แก้ไขทริป" → remove a member with expenses.
 - `SONNET-FIXES.md` holds the mechanical batch delegated to another session.
 - Reminder: running `next build` while a dev server is live on the same `.next` breaks that server (happened again during the audit).
+
+## Feature — EV charging logs
+
+Vehicle page can now log EV charging next to fuel fill-ups.
+
+- **Schema:** migration `0007_fuel_logs_energy.sql` adds `fuel_logs.energy text not null default 'fuel' check (energy in ('fuel','ev'))`. For `ev` rows `liters` holds kWh and `price_per_l` holds ฿/kWh (no column rename). **Not yet applied to the Supabase project — apply it before deploying**, otherwise `/vehicle` fails selecting `energy`. `lib/db.types.ts` hand-edited, not regenerated.
+- **Action/form:** `createFuelLog` takes an `energy` field (zod enum, default `fuel`); the auto-created transaction is named "ชาร์จไฟ <รถ>" (category "รถ"). `FuelLogForm` has a น้ำมัน / ชาร์จไฟ (EV) toggle, labels switch to kWh, and `VehiclePickItem.defaultEnergy` preselects the vehicle's latest type.
+- **Stats:** `vehicle-client.tsx` computes `fuelStats` per energy type (km/L and km/kWh aren't comparable). Hero, overview, fuel tab show a block per type that has data; EV wording only appears once a vehicle has an EV log. Lifetime/yearly cost include both. New `bolt` icon; `Energy` / `ENERGY_UNIT` in `lib/domain/vehicle.ts`.
+- **Not done:** `import-legacy.ts`, `scripts/seed.ts` and backup don't know about `energy` (imports default to fuel); no unit test for per-energy stats; not click-tested in the browser (typecheck + 122 vitest pass).

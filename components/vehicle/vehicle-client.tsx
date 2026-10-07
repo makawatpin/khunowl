@@ -9,7 +9,7 @@ import { VehicleForm, type VehicleFormInitial } from "@/components/forms/vehicle
 import { VehicleServiceForm, type VehicleServiceFormInitial } from "@/components/forms/vehicle-service-form";
 import { FuelLogForm, type VehiclePickItem } from "@/components/forms/fuel-log-form";
 import { deleteFuelLog } from "@/lib/actions/fuel-logs";
-import { SVC_CATEGORIES, fuelStats, nextServiceKm, svcIcon, vehicleYearCost } from "@/lib/domain/vehicle";
+import { ENERGY_UNIT, SVC_CATEGORIES, type Energy, fuelStats, nextServiceKm, svcIcon, vehicleYearCost } from "@/lib/domain/vehicle";
 import { dueLabel } from "@/lib/domain/dates";
 import { dLong, dShort } from "@/lib/format/date";
 import { VEHICLE_KIND_LABEL } from "@/lib/i18n/th";
@@ -22,6 +22,7 @@ export interface FuelLogItem {
   liters: number;
   pricePerL: number | null;
   total: number;
+  energy: Energy;
 }
 
 export interface VehicleDocItem {
@@ -81,7 +82,25 @@ export function VehicleClient({
 
   const svc = [...(servicesByVehicle[v.id] ?? [])].sort((a, b) => (b.date < a.date ? -1 : 1));
   const fuel = [...(fuelByVehicle[v.id] ?? [])].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.mileage - a.mileage));
-  const fs = fuelStats(fuel, todayISO.slice(0, 7));
+  // km/L and km/kWh aren't comparable, so efficiency is computed per energy type.
+  const monthKey = todayISO.slice(0, 7);
+  const energyBlocks = (["fuel", "ev"] as const)
+    .map((key) => {
+      const rows = fuel.filter((f) => f.energy === key);
+      return {
+        key,
+        rows,
+        st: fuelStats(rows, monthKey),
+        kmUnit: key === "ev" ? "กม./kWh" : "กม./ลิตร",
+        kmUnitShort: key === "ev" ? "กม./kWh" : "กม./ล.",
+        monthlyLabel: key === "ev" ? "ค่าชาร์จเดือนนี้" : "ค่าน้ำมันเดือนนี้",
+        needMore: key === "ev" ? "ชาร์จ 2 ครั้งเพื่อคำนวณ" : "เติมน้ำมัน 2 ครั้งเพื่อคำนวณ",
+      };
+    })
+    .filter((b) => b.rows.length);
+  const hasEv = energyBlocks.some((b) => b.key === "ev");
+  // Hero/overview show every energy type with data; an empty vehicle still shows the petrol placeholder.
+  const effBlocks = energyBlocks.length ? energyBlocks : [{ key: "fuel" as const, rows: [], st: fuelStats([], monthKey), kmUnit: "กม./ลิตร", kmUnitShort: "กม./ล.", monthlyLabel: "ค่าน้ำมันเดือนนี้", needMore: "เติมน้ำมัน 2 ครั้งเพื่อคำนวณ" }];
   const target = nextServiceKm(v.mileage, v.serviceEveryKm);
   const kmLeft = target - v.mileage;
   const svcCost = (s: VehicleServiceFormInitial) => s.cost;
@@ -102,7 +121,7 @@ export function VehicleClient({
   const svcList = svcCatF === "all" ? svc : svc.filter((s) => (s.category ?? SVC_CATEGORIES[0][0]) === svcCatF);
   const firstDate = [...svc, ...fuel].reduce((m, x) => (!m || x.date < m ? x.date : m), "");
   const vehicleName = [v.brand, v.model].filter(Boolean).join(" ");
-  const vehiclePickList: VehiclePickItem[] = vehicles.map((x) => ({ id: x.id, name: [x.brand, x.model].filter(Boolean).join(" ") || "รถ", mileage: x.mileage }));
+  const vehiclePickList: VehiclePickItem[] = vehicles.map((x) => ({ id: x.id, name: [x.brand, x.model].filter(Boolean).join(" ") || "รถ", mileage: x.mileage, defaultEnergy: (fuelByVehicle[x.id] ?? []).reduce<FuelLogItem | null>((m, f) => (!m || f.date > m.date ? f : m), null)?.energy }));
   const ins = { company: v.insuranceCompany, policy: v.insurancePolicy, expiry: v.insuranceExpiry, premium: v.insurancePremium };
   const prb = { expiry: v.prbExpiry, premium: v.prbPremium };
   const tax = { expiry: v.taxExpiry, premium: v.taxPremium };
@@ -152,15 +171,17 @@ export function VehicleClient({
         <div style={{ fontSize: 13.5, color: "rgba(255,255,255,.85)" }}>เลขไมล์ {v.mileage.toLocaleString()} กม.</div>
         <div style={{ display: "flex", gap: 18, marginTop: 20, paddingTop: 16, borderTop: "1px solid rgba(255,255,255,.28)", flexWrap: "wrap" }}>
           <div style={{ flex: 1, minWidth: 100 }}><div className="cap">เช็กระยะถัดไป</div><div style={{ fontSize: 16, fontWeight: 600 }}>{kmLeft.toLocaleString()} กม.</div></div>
-          <div style={{ flex: 1, minWidth: 100 }}><div className="cap">กม./ลิตร</div><div style={{ fontSize: 16, fontWeight: 600 }}>{fs.legs ? fs.kmPerL.toFixed(1) : "—"}</div></div>
+          {effBlocks.map((b) => (
+            <div key={b.key} style={{ flex: 1, minWidth: 100 }}><div className="cap">{b.kmUnit}</div><div style={{ fontSize: 16, fontWeight: 600 }}>{b.st.legs ? b.st.kmPerL.toFixed(1) : "—"}</div></div>
+          ))}
           <div style={{ flex: 1, minWidth: 100 }}><div className="cap">ประกันหมด</div><div style={{ fontSize: 16, fontWeight: 600 }}>{ins.expiry ? dShort(ins.expiry, todayISO) : "—"}</div></div>
           <div style={{ flex: 1, minWidth: 100 }}><div className="cap">ใช้จ่ายตลอดการใช้งาน</div><div style={{ fontSize: 16, fontWeight: 600 }}><Money value={lifeCost} /></div></div>
         </div>
       </div>
       <div className="actbar">
         <button className="btn" onClick={() => setFuelForm(true)}>
-          <Icon name="fuel" size={15} />
-          เติมน้ำมัน
+          <Icon name={hasEv && energyBlocks.length === 1 ? "bolt" : "fuel"} size={15} />
+          {hasEv && energyBlocks.length === 1 ? "ชาร์จไฟ" : hasEv ? "เติมน้ำมัน / ชาร์จไฟ" : "เติมน้ำมัน"}
         </button>
         <button className="btn" onClick={() => setSvcForm("new")}>
           <Icon name="wrench" size={15} />
@@ -174,7 +195,7 @@ export function VehicleClient({
       <div className="tabs">
         <button className={tab === "overview" ? "on" : ""} onClick={() => setTab("overview")}>ภาพรวม</button>
         <button className={tab === "service" ? "on" : ""} onClick={() => setTab("service")}>ซ่อมบำรุง</button>
-        <button className={tab === "fuel" ? "on" : ""} onClick={() => setTab("fuel")}>น้ำมัน</button>
+        <button className={tab === "fuel" ? "on" : ""} onClick={() => setTab("fuel")}>{hasEv ? "น้ำมัน/ชาร์จ" : "น้ำมัน"}</button>
         <button className={tab === "papers" ? "on" : ""} onClick={() => setTab("papers")}>ประกัน & ภาษี</button>
       </div>
 
@@ -188,13 +209,17 @@ export function VehicleClient({
             </div>
             <div className="card card-pad" style={{ background: "var(--pos-soft)" }}>
               <div className="cap">อัตราสิ้นเปลือง</div>
-              <div className="num" style={{ fontSize: 22, fontWeight: 600, marginTop: 6 }}>{fs.legs ? `${fs.kmPerL.toFixed(1)} กม./ลิตร` : "ยังไม่มีข้อมูล"}</div>
-              <div className="row-s">{fs.legs ? `${fs.costPerKm.toFixed(2)} บาท/กม.` : "เติมน้ำมัน 2 ครั้งเพื่อคำนวณ"}</div>
+              {effBlocks.map((b) => (
+                <div key={b.key}>
+                  <div className="num" style={{ fontSize: 22, fontWeight: 600, marginTop: 6 }}>{b.st.legs ? `${b.st.kmPerL.toFixed(1)} ${b.kmUnit}` : "ยังไม่มีข้อมูล"}</div>
+                  <div className="row-s">{b.st.legs ? `${b.st.costPerKm.toFixed(2)} บาท/กม.` : b.needMore}</div>
+                </div>
+              ))}
             </div>
             <div className="card card-pad hero">
               <div className="cap">ค่าใช้จ่ายรถปี {year}</div>
               <div className="num" style={{ fontSize: 22, fontWeight: 600, marginTop: 6 }}><Money value={yearCost} /></div>
-              <div className="row-s">น้ำมัน + ซ่อม + ประกัน + ภาษี</div>
+              <div className="row-s">{hasEv ? "น้ำมัน/ค่าชาร์จ" : "น้ำมัน"} + ซ่อม + ประกัน + ภาษี</div>
             </div>
           </div>
           <div className="sec"><h2>สถานะที่ต้องดูแล</h2></div>
@@ -276,7 +301,7 @@ export function VehicleClient({
                 <div className="cap">ค่าใช้จ่ายตลอดการใช้งาน</div>
                 <div className="num" style={{ fontSize: 22, fontWeight: 600, marginTop: 6 }}><Money value={lifeCost} /></div>
                 <div className="row-s">
-                  ซ่อม/ดูแล <Money value={svcTotal} /> · น้ำมัน <Money value={fuelSum} />{firstDate ? ` · ตั้งแต่ ${dLong(firstDate)}` : ""}
+                  ซ่อม/ดูแล <Money value={svcTotal} /> · {hasEv ? "น้ำมัน/ชาร์จ" : "น้ำมัน"} <Money value={fuelSum} />{firstDate ? ` · ตั้งแต่ ${dLong(firstDate)}` : ""}
                 </div>
               </div>
               <div className="card card-pad" style={{ background: "var(--accent-soft)" }}>
@@ -373,30 +398,32 @@ export function VehicleClient({
       {tab === "fuel" &&
         (fuel.length ? (
           <>
-            <div className="grid g3">
-              <div className="card card-pad" style={{ background: "var(--pos-soft)" }}>
-                <div className="cap">เฉลี่ย</div>
-                <div className="num" style={{ fontSize: 22, fontWeight: 600, marginTop: 6 }}>{fs.legs ? `${fs.kmPerL.toFixed(1)} กม./ล.` : "—"}</div>
+            {energyBlocks.map((b) => (
+              <div className="grid g3" key={b.key} style={b.key === "ev" && energyBlocks.length > 1 ? { marginTop: 12 } : undefined}>
+                <div className="card card-pad" style={{ background: "var(--pos-soft)" }}>
+                  <div className="cap">เฉลี่ย{hasEv ? (b.key === "ev" ? " (ไฟฟ้า)" : " (น้ำมัน)") : ""}</div>
+                  <div className="num" style={{ fontSize: 22, fontWeight: 600, marginTop: 6 }}>{b.st.legs ? `${b.st.kmPerL.toFixed(1)} ${b.kmUnitShort}` : "—"}</div>
+                </div>
+                <div className="card card-pad" style={{ background: "var(--accent-soft)" }}>
+                  <div className="cap">ต้นทุนต่อ กม.</div>
+                  <div className="num" style={{ fontSize: 22, fontWeight: 600, marginTop: 6 }}>{b.st.legs ? `${b.st.costPerKm.toFixed(2)} บาท` : "—"}</div>
+                </div>
+                <div className="card card-pad hero">
+                  <div className="cap">{b.monthlyLabel}</div>
+                  <div className="num" style={{ fontSize: 22, fontWeight: 600, marginTop: 6 }}><Money value={b.st.monthly} /></div>
+                </div>
               </div>
-              <div className="card card-pad" style={{ background: "var(--accent-soft)" }}>
-                <div className="cap">ต้นทุนต่อ กม.</div>
-                <div className="num" style={{ fontSize: 22, fontWeight: 600, marginTop: 6 }}>{fs.legs ? `${fs.costPerKm.toFixed(2)} บาท` : "—"}</div>
-              </div>
-              <div className="card card-pad hero">
-                <div className="cap">ค่าน้ำมันเดือนนี้</div>
-                <div className="num" style={{ fontSize: 22, fontWeight: 600, marginTop: 6 }}><Money value={fs.monthly} /></div>
-              </div>
-            </div>
+            ))}
             <div className="sec">
-              <h2>ประวัติเติมน้ำมัน</h2>
+              <h2>{hasEv ? "ประวัติเติมน้ำมัน / ชาร์จไฟ" : "ประวัติเติมน้ำมัน"}</h2>
               <button className="more" onClick={() => setFuelForm(true)}>+ บันทึก</button>
             </div>
             <div className="card list">
               {fuel.map((f) => (
                 <ActRow
                   key={f.id}
-                  icon="fuel"
-                  title={`${f.liters.toFixed(1)} ลิตร · ฿${f.pricePerL ?? "—"}/ล.`}
+                  icon={f.energy === "ev" ? "bolt" : "fuel"}
+                  title={f.energy === "ev" ? `${f.liters.toFixed(1)} kWh · ฿${f.pricePerL ?? "—"}/kWh` : `${f.liters.toFixed(1)} ${ENERGY_UNIT.fuel} · ฿${f.pricePerL ?? "—"}/ล.`}
                   sub={`${dShort(f.date, todayISO)} · ${f.mileage.toLocaleString()} กม.`}
                   amount={f.total}
                   btn="ลบ"

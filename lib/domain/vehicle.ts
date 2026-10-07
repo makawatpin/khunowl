@@ -19,6 +19,11 @@ export function nextServiceKm(mileage: number, serviceEveryKm: number): number {
   return Math.ceil((mileage + 1) / every) * every;
 }
 
+/** 'fuel' = litres / ฿ per L, 'ev' = kWh / ฿ per kWh (stored in the same liters / price_per_l columns). */
+export type Energy = "fuel" | "ev";
+
+export const ENERGY_UNIT: Record<Energy, string> = { fuel: "ลิตร", ev: "kWh" };
+
 export interface FuelLog {
   date: string;
   mileage: number;

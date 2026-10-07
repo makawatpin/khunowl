@@ -21,7 +21,7 @@ export default async function VehiclePage() {
       "id, kind, brand, model, year, plate, vin, color, mileage, service_every_km, insurance_company, insurance_policy, insurance_expiry, insurance_premium, prb_expiry, prb_premium, tax_expiry, tax_premium",
     ),
     supabase.from("vehicle_services").select("id, vehicle_id, category, name, date, mileage, cost, provider, note, items, receipt_path"),
-    supabase.from("fuel_logs").select("id, vehicle_id, date, mileage, liters, price_per_l, total"),
+    supabase.from("fuel_logs").select("id, vehicle_id, date, mileage, liters, price_per_l, total, energy"),
     supabase.from("documents").select("id, name, type, expiry, related"),
     supabase.from("accounts").select("id, name").eq("archived", false),
     supabase.from("cards").select("id, name").eq("archived", false),
@@ -47,7 +47,7 @@ export default async function VehiclePage() {
   const fuelByVehicle: Record<string, FuelLogItem[]> = {};
   for (const f of fuelRows ?? []) {
     const list = fuelByVehicle[f.vehicle_id] ?? (fuelByVehicle[f.vehicle_id] = []);
-    list.push({ id: f.id, date: f.date, mileage: f.mileage, liters: f.liters, pricePerL: f.price_per_l, total: f.total });
+    list.push({ id: f.id, date: f.date, mileage: f.mileage, liters: f.liters, pricePerL: f.price_per_l, total: f.total, energy: f.energy === "ev" ? "ev" : "fuel" });
   }
 
   const documents = (docRows ?? []).map((d) => ({ id: d.id, name: d.name, type: d.type, expiry: d.expiry, related: d.related }));
