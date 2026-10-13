@@ -7,6 +7,7 @@ export default async function SettingsPage() {
 
   let hasPin = false;
   let notifyEnabled = false;
+  let notifyLeadDays: number[] = [3, 1, 0];
   let budgets: Record<string, number> = {};
   let incomeList: { id: string; name: string; amount: number; dayOfMonth: number; accountId: string }[] = [];
   let accounts: { id: string; name: string }[] = [];
@@ -18,13 +19,14 @@ export default async function SettingsPage() {
       supabase.from("recurring_income").select("id, name, amount, day_of_month, account_id"),
       supabase.from("accounts").select("id, name").eq("archived", false),
     ]);
-    const prefs = (profile?.prefs as { pin?: string; notify?: boolean } | null) ?? {};
+    const prefs = (profile?.prefs as { pin?: string; notify?: boolean; notifyLeadDays?: number[] } | null) ?? {};
     hasPin = !!prefs.pin;
     notifyEnabled = !!prefs.notify;
+    if (prefs.notifyLeadDays) notifyLeadDays = prefs.notifyLeadDays;
     budgets = Object.fromEntries((budgetRows ?? []).map((b) => [b.category, b.monthly_limit]));
     incomeList = (incomeRows ?? []).map((i) => ({ id: i.id, name: i.name, amount: i.amount, dayOfMonth: i.day_of_month, accountId: i.account_id ?? "" }));
     accounts = (accountRows ?? []).filter((a): a is { id: string; name: string } => !!a.id && !!a.name);
   }
 
-  return <SettingsClient hasPin={hasPin} budgets={budgets} incomeList={incomeList} accounts={accounts} notifyEnabled={notifyEnabled} />;
+  return <SettingsClient hasPin={hasPin} budgets={budgets} incomeList={incomeList} accounts={accounts} notifyEnabled={notifyEnabled} notifyLeadDays={notifyLeadDays} />;
 }

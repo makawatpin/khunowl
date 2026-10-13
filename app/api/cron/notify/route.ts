@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getNotificationItems } from "@/lib/server/notifications";
-import { sendPush } from "@/lib/server/push";
-import { daysTo } from "@/lib/domain/dates";
+import { pushToUser } from "@/lib/server/push";
+import { DEFAULT_LEAD_DAYS, selectPushItems } from "@/lib/domain/notifications";
 import { todayISOInBangkok } from "@/lib/dates/today";
 
 export const dynamic = "force-dynamic";
@@ -22,25 +22,24 @@ export async function GET(request: Request) {
   let notified = 0;
   let removedSubscriptions = 0;
   for (const p of profiles ?? []) {
-    const notify = (p.prefs as { notify?: boolean } | null)?.notify;
-    if (!notify) continue;
+    const prefs = p.prefs as { notify?: boolean; notifyLeadDays?: number[] } | null;
+    if (!prefs?.notify) continue;
 
     const items = await getNotificationItems(supabase, p.user_id);
-    const dueSoon = items.filter((n) => !n.done && daysTo(n.date, todayISO) <= 1);
-    if (!dueSoon.length) continue;
+    const leadDays = prefs.notifyLeadDays?.length ? prefs.notifyLeadDays : [...DEFAULT_LEAD_DAYS];
+    const due = selectPushItems(items, todayISO, leadDays);
+    if (!due.length) continue;
 
-    const { data: subs } = await supabase.from("push_subscriptions").select("endpoint, p256dh, auth").eq("user_id", p.user_id);
-    if (!subs?.length) continue;
-
-    const payload = { title: "ถึงกำหนด " + dueSoon.length + " รายการ", body: dueSoon.slice(0, 3).map((n) => n.title).join(", "), url: "/notifications" };
-    for (const sub of subs) {
-      const result = await sendPush(sub, payload);
-      if (result.ok) notified++;
-      else if (result.gone) {
-        await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
-        removedSubscriptions++;
-      }
-    }
+    const result = await pushToUser(supabase, p.user_id, {
+      title: "ถึงกำหนด " + due.length + " รายการ",
+      body: due.slice(0, 3).map((n) => n.title).join(", ") + (due.length > 3 ? ` และอีก ${due.length - 3} รายการ` : ""),
+      url: "/notifications",
+      ackIds: due.map((n) => n.id),
+      badge: items.filter((n) => !n.done).length,
+      tag: "daily-due",
+    });
+    notified += result.sent;
+    removedSubscriptions += result.removed;
   }
 
   return NextResponse.json({ ok: true, notified, removedSubscriptions });

@@ -20,12 +20,14 @@ export function SettingsClient({
   incomeList,
   accounts,
   notifyEnabled,
+  notifyLeadDays,
 }: {
   hasPin: boolean;
   budgets: Record<string, number>;
   incomeList: IncomeFormInitial[];
   accounts: { id: string; name: string }[];
   notifyEnabled: boolean;
+  notifyLeadDays: number[];
 }) {
   const router = useRouter();
   const { show } = useToast();
@@ -69,7 +71,7 @@ export function SettingsClient({
       </div>
 
       <div className="sec"><h2>การแจ้งเตือน</h2></div>
-      <PushNotificationToggle initialEnabled={notifyEnabled} />
+      <PushNotificationToggle initialEnabled={notifyEnabled} initialLeadDays={notifyLeadDays} />
 
       <div className="sec"><h2>เงิน</h2></div>
       <div className="card list">

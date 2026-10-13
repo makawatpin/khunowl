@@ -110,3 +110,22 @@ export function notifications(input: NotificationsInput): NotificationItem[] {
 export function openNotiCount(items: NotificationItem[]): number {
   return items.filter((n) => !n.done).length;
 }
+
+export const DEFAULT_LEAD_DAYS = [3, 1, 0] as const;
+export const LEAD_DAY_OPTIONS = [7, 3, 1, 0] as const;
+
+/**
+ * Which open notifications deserve a push today. Fires on the chosen lead days before each due
+ * date (0 = the due date itself); overdue payments keep nagging daily until acknowledged.
+ */
+export function selectPushItems(
+  items: NotificationItem[],
+  todayISO: string,
+  leadDays: readonly number[] = DEFAULT_LEAD_DAYS,
+): NotificationItem[] {
+  return items.filter((n) => {
+    if (n.done) return false;
+    const d = daysTo(n.date, todayISO);
+    return leadDays.includes(d) || (d < 0 && n.group === "ต้องจ่าย");
+  });
+}

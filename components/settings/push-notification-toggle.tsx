@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { deletePushSubscription, savePushSubscription } from "@/lib/actions/push";
+import { deletePushSubscription, savePushSubscription, saveNotifyLeadDays, sendTestPush } from "@/lib/actions/push";
+import { LEAD_DAY_OPTIONS } from "@/lib/domain/notifications";
 
 function urlBase64ToUint8Array(base64: string): Uint8Array {
   const padding = "=".repeat((4 - (base64.length % 4)) % 4);
@@ -10,15 +11,41 @@ function urlBase64ToUint8Array(base64: string): Uint8Array {
   return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
 }
 
-export function PushNotificationToggle({ initialEnabled }: { initialEnabled: boolean }) {
+const LEAD_LABEL: Record<number, string> = { 7: "ล่วงหน้า 7 วัน", 3: "ล่วงหน้า 3 วัน", 1: "ล่วงหน้า 1 วัน", 0: "วันครบกำหนด" };
+
+export function PushNotificationToggle({ initialEnabled, initialLeadDays }: { initialEnabled: boolean; initialLeadDays: number[] }) {
   const [enabled, setEnabled] = useState(initialEnabled);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [supported, setSupported] = useState(true);
+  const [needsInstall, setNeedsInstall] = useState(false);
+  const [leadDays, setLeadDays] = useState<number[]>(initialLeadDays);
+  const [testMsg, setTestMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    setSupported(typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window);
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const standalone = window.matchMedia("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
+    // iOS only exposes Web Push to a web app that was added to the Home Screen.
+    setNeedsInstall(isIOS && !standalone);
+    setSupported("serviceWorker" in navigator && "PushManager" in window && "Notification" in window);
   }, []);
+
+  const handleTest = async () => {
+    setPending(true);
+    setTestMsg(null);
+    setError(null);
+    const res = await sendTestPush();
+    if (res.error) setError(res.error);
+    else setTestMsg(`ส่งแล้ว ${res.sent}/${res.devices} อุปกรณ์ — รอสักครู่`);
+    setPending(false);
+  };
+
+  const toggleLead = async (d: number) => {
+    const next = leadDays.includes(d) ? leadDays.filter((x) => x !== d) : [...leadDays, d];
+    setLeadDays(next);
+    const res = await saveNotifyLeadDays(next);
+    if (res.error) setError(res.error);
+  };
 
   const handleEnable = async () => {
     setPending(true);
@@ -66,6 +93,15 @@ export function PushNotificationToggle({ initialEnabled }: { initialEnabled: boo
     }
   };
 
+  if (needsInstall) {
+    return (
+      <div className="card card-pad">
+        <div style={{ fontWeight: 600 }}>ติดตั้งแอปก่อนเปิดการแจ้งเตือน</div>
+        <div className="row-s">บน iPhone/iPad: กดปุ่มแชร์ใน Safari แล้วเลือก &quot;เพิ่มไปยังหน้าจอโฮม&quot; จากนั้นเปิดแอปจากไอคอนและกลับมาที่หน้านี้</div>
+      </div>
+    );
+  }
+
   if (!supported) {
     return <div className="hint">เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือนแบบพุช</div>;
   }
@@ -81,6 +117,23 @@ export function PushNotificationToggle({ initialEnabled }: { initialEnabled: boo
           {pending ? "กำลังตั้งค่า…" : enabled ? "ปิดการแจ้งเตือน" : "เปิดการแจ้งเตือน"}
         </button>
       </div>
+      {enabled && (
+        <>
+          <div className="row-s" style={{ marginTop: 12 }}>เตือนเมื่อ (เช้า 08:00)</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+            {LEAD_DAY_OPTIONS.map((d) => (
+              <button key={d} className={"btn" + (leadDays.includes(d) ? " btn-primary" : "")} aria-pressed={leadDays.includes(d)} onClick={() => toggleLead(d)}>
+                {LEAD_LABEL[d]}
+              </button>
+            ))}
+          </div>
+          <div className="row-s" style={{ marginTop: 8 }}>บิลที่เลยกำหนดจะเตือนทุกเช้าจนกว่าจะทำเครื่องหมายแล้ว</div>
+          <div style={{ marginTop: 12 }}>
+            <button className="btn" disabled={pending} onClick={handleTest}>ส่งแจ้งเตือนทดสอบ</button>
+          </div>
+        </>
+      )}
+      {testMsg && <div className="hint">{testMsg}</div>}
       {error && <div className="hint" style={{ color: "var(--neg)" }}>{error}</div>}
     </div>
   );
