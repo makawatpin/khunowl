@@ -20,7 +20,7 @@ const fuelSchema = z.object({
   energy: z.enum(["fuel", "ev"]).default("fuel"),
 });
 
-export async function createFuelLog(vehicleId: string, formData: FormData): Promise<{ id?: string; error?: string }> {
+function parseFuelLog(formData: FormData) {
   const total = parseFloat(String(formData.get("total") ?? "").replace(/,/g, ""));
   const liters = parseFloat(String(formData.get("liters") ?? "").replace(/,/g, "")) || undefined;
   const pricePerL = parseFloat(String(formData.get("pricePerL") ?? "").replace(/,/g, "")) || undefined;
@@ -37,8 +37,15 @@ export async function createFuelLog(vehicleId: string, formData: FormData): Prom
   });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const d = parsed.data;
+  if (!d.liters) return { error: d.energy === "ev" ? "ระบุ kWh หรือราคา/kWh" : "ระบุลิตรหรือราคา/ลิตร" };
+  return { d: { ...d, liters: d.liters } };
+}
+
+export async function createFuelLog(vehicleId: string, formData: FormData): Promise<{ id?: string; error?: string }> {
+  const p = parseFuelLog(formData);
+  if ("error" in p) return { error: p.error };
+  const d = p.d;
   const isEv = d.energy === "ev";
-  if (!d.liters) return { error: isEv ? "ระบุ kWh หรือราคา/kWh" : "ระบุลิตรหรือราคา/ลิตร" };
 
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -69,6 +76,26 @@ export async function createFuelLog(vehicleId: string, formData: FormData): Prom
 
   revalidateVehiclePages();
   return { id: data.id };
+}
+
+/** Edits the log row only — a linked expense transaction (if any) isn't tracked, so it is left untouched. */
+export async function updateFuelLog(id: string, formData: FormData): Promise<{ error?: string }> {
+  const p = parseFuelLog(formData);
+  if ("error" in p) return { error: p.error };
+  const d = p.d;
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("fuel_logs")
+    .update({ date: d.date, mileage: d.mileage, liters: Math.round(d.liters * 10) / 10, price_per_l: d.pricePerL ?? null, total: d.total, energy: d.energy })
+    .eq("id", id)
+    .select("vehicle_id")
+    .single();
+  if (error) return { error: error.message };
+
+  await bumpVehicleMileage(data.vehicle_id, d.mileage);
+  revalidateVehiclePages();
+  return {};
 }
 
 export async function deleteFuelLog(id: string): Promise<{ error?: string }> {

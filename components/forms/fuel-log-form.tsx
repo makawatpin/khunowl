@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { FormModal, Field, FieldGrid } from "@/components/ui/form-modal";
-import { createFuelLog } from "@/lib/actions/fuel-logs";
+import { createFuelLog, deleteFuelLog, updateFuelLog } from "@/lib/actions/fuel-logs";
 import { useToast } from "@/components/providers/toast-provider";
 import { todayISOInBangkok } from "@/lib/dates/today";
 import { ENERGY_UNIT, type Energy } from "@/lib/domain/vehicle";
@@ -16,31 +16,43 @@ export interface VehiclePickItem {
   defaultEnergy?: Energy;
 }
 
+export interface FuelLogFormInitial {
+  id: string;
+  date: string;
+  mileage: number;
+  liters: number;
+  pricePerL: number | null;
+  total: number;
+  energy: Energy;
+}
+
 export function FuelLogForm({
   vehicles,
   defaultVehicleId,
   accounts,
   cards,
+  initial,
   onClose,
 }: {
   vehicles: VehiclePickItem[];
   defaultVehicleId: string;
   accounts: { id: string; name: string }[];
   cards: { id: string; name: string }[];
+  initial?: FuelLogFormInitial;
   onClose: () => void;
 }) {
   const router = useRouter();
   const { show } = useToast();
   const [vehicleId, setVehicleId] = useState(defaultVehicleId);
   const vehicle = vehicles.find((v) => v.id === vehicleId) ?? vehicles[0];
-  const [energy, setEnergy] = useState<Energy>(vehicle?.defaultEnergy ?? "fuel");
+  const [energy, setEnergy] = useState<Energy>(initial?.energy ?? vehicle?.defaultEnergy ?? "fuel");
   const isEv = energy === "ev";
   const unit = ENERGY_UNIT[energy];
-  const [date, setDate] = useState(todayISOInBangkok());
-  const [mileage, setMileage] = useState(String(vehicle?.mileage ?? ""));
-  const [liters, setLiters] = useState("");
-  const [pricePerL, setPricePerL] = useState("");
-  const [total, setTotal] = useState("");
+  const [date, setDate] = useState(initial?.date ?? todayISOInBangkok());
+  const [mileage, setMileage] = useState(String(initial?.mileage ?? vehicle?.mileage ?? ""));
+  const [liters, setLiters] = useState(initial ? String(initial.liters) : "");
+  const [pricePerL, setPricePerL] = useState(initial?.pricePerL != null ? String(initial.pricePerL) : "");
+  const [total, setTotal] = useState(initial ? String(initial.total) : "");
   const [paySrc, setPaySrc] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,6 +84,18 @@ export function FuelLogForm({
       fd.set("paySrc", paySrc);
       fd.set("paySrcKind", cards.some((c) => c.id === paySrc) ? "card" : "account");
     }
+    if (initial) {
+      const res = await updateFuelLog(initial.id, fd);
+      setPending(false);
+      if (res.error) {
+        setError(res.error);
+        return;
+      }
+      onClose();
+      router.refresh();
+      show("แก้ไขรายการแล้ว");
+      return;
+    }
     const res = await createFuelLog(vehicleId, fd);
     setPending(false);
     if (res.error) {
@@ -83,14 +107,35 @@ export function FuelLogForm({
     show(`${isEv ? "บันทึกชาร์จไฟ" : "บันทึกเติมน้ำมัน"} ${computedTotal.toLocaleString()} บาทแล้ว`);
   };
 
+  const handleDelete = async () => {
+    if (!initial) return;
+    setPending(true);
+    const res = await deleteFuelLog(initial.id);
+    setPending(false);
+    if (res.error) {
+      setError(res.error);
+      return;
+    }
+    onClose();
+    router.refresh();
+    show("ลบรายการแล้ว");
+  };
+
   return (
-    <FormModal title={isEv ? "บันทึกชาร์จไฟ" : "บันทึกเติมน้ำมัน"} onClose={onClose} onSave={handleSave} valid={valid} pending={pending}>
+    <FormModal
+      title={initial ? (isEv ? "แก้ไขชาร์จไฟ" : "แก้ไขเติมน้ำมัน") : isEv ? "บันทึกชาร์จไฟ" : "บันทึกเติมน้ำมัน"}
+      onClose={onClose}
+      onSave={handleSave}
+      onDelete={initial ? handleDelete : undefined}
+      valid={valid}
+      pending={pending}
+    >
       {error && <div className="hint" style={{ color: "var(--neg)" }}>{error}</div>}
       <div className="tabs">
         <button type="button" className={!isEv ? "on" : ""} onClick={() => setEnergy("fuel")}>น้ำมัน</button>
         <button type="button" className={isEv ? "on" : ""} onClick={() => setEnergy("ev")}>ชาร์จไฟ (EV)</button>
       </div>
-      {vehicles.length > 1 && (
+      {vehicles.length > 1 && !initial && (
         <Field label="รถ">
           <select
             value={vehicleId}
@@ -124,6 +169,9 @@ export function FuelLogForm({
       <Field label="ยอดรวม (บาท)">
         <input value={total} onChange={(e) => setTotal(e.target.value)} inputMode="decimal" placeholder={computedTotal ? String(computedTotal) : "0"} />
       </Field>
+      {initial ? (
+        <div className="hint">การแก้ไขนี้ไม่เปลี่ยนรายการรายจ่ายที่เคยบันทึกไว้ในบัญชี</div>
+      ) : (
       <Field label="จ่ายจาก">
         <select value={paySrc} onChange={(e) => setPaySrc(e.target.value)}>
           <option value="">ไม่บันทึกรายจ่าย</option>
@@ -141,6 +189,7 @@ export function FuelLogForm({
           )}
         </select>
       </Field>
+      )}
     </FormModal>
   );
 }

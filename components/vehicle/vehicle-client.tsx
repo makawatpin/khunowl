@@ -7,7 +7,7 @@ import { Money } from "@/components/ui/money";
 import { ActRow } from "@/components/ui/act-row";
 import { VehicleForm, type VehicleFormInitial } from "@/components/forms/vehicle-form";
 import { VehicleServiceForm, type VehicleServiceFormInitial } from "@/components/forms/vehicle-service-form";
-import { FuelLogForm, type VehiclePickItem } from "@/components/forms/fuel-log-form";
+import { FuelLogForm, type FuelLogFormInitial, type VehiclePickItem } from "@/components/forms/fuel-log-form";
 import { deleteFuelLog } from "@/lib/actions/fuel-logs";
 import { ENERGY_UNIT, SVC_CATEGORIES, type Energy, fuelStats, nextServiceKm, svcIcon, vehicleYearCost } from "@/lib/domain/vehicle";
 import { dueLabel } from "@/lib/domain/dates";
@@ -60,7 +60,7 @@ export function VehicleClient({
   const [svcOpen, setSvcOpen] = useState<string | null>(null);
   const [vehicleForm, setVehicleForm] = useState<"new" | VehicleFormInitial | null>(null);
   const [svcForm, setSvcForm] = useState<"new" | VehicleServiceFormInitial | null>(null);
-  const [fuelForm, setFuelForm] = useState(false);
+  const [fuelForm, setFuelForm] = useState<boolean | FuelLogFormInitial>(false);
 
   const v = vehicles.find((x) => x.id === vehicleId) ?? null;
 
@@ -428,6 +428,7 @@ export function VehicleClient({
                   amount={f.total}
                   btn="ลบ"
                   onBtn={() => handleDeleteFuel(f.id)}
+                  onClick={() => setFuelForm(f)}
                 />
               ))}
             </div>
@@ -502,7 +503,7 @@ export function VehicleClient({
       {svcForm && svcForm !== "new" && (
         <VehicleServiceForm vehicles={vehiclePickList} defaultVehicleId={v.id} initial={svcForm} accounts={accounts} cards={cards} onClose={() => setSvcForm(null)} />
       )}
-      {fuelForm && <FuelLogForm vehicles={vehiclePickList} defaultVehicleId={v.id} accounts={accounts} cards={cards} onClose={() => setFuelForm(false)} />}
+      {fuelForm && <FuelLogForm vehicles={vehiclePickList} defaultVehicleId={v.id} accounts={accounts} cards={cards} initial={typeof fuelForm === "object" ? fuelForm : undefined} onClose={() => setFuelForm(false)} />}
     </>
   );
 }
