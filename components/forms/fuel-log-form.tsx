@@ -46,6 +46,8 @@ export function FuelLogForm({
   const [error, setError] = useState<string | null>(null);
 
   const computedTotal = parseFloat(total) || Math.round((parseFloat(liters) || 0) * (parseFloat(pricePerL) || 0));
+  // Price per unit is derived from total ÷ amount when left blank (e.g. 139.89 ÷ 18.9 kWh → 7.40).
+  const derivedPrice = !pricePerL && parseFloat(total) > 0 && parseFloat(liters) > 0 ? Math.round((parseFloat(total) / parseFloat(liters)) * 100) / 100 : null;
   const valid = computedTotal > 0 && parseFloat(mileage) > 0 && !!vehicle;
 
   if (!vehicle) {
@@ -63,7 +65,7 @@ export function FuelLogForm({
     fd.set("date", date);
     fd.set("mileage", mileage);
     fd.set("liters", liters);
-    fd.set("pricePerL", pricePerL);
+    fd.set("pricePerL", pricePerL || (derivedPrice != null ? String(derivedPrice) : ""));
     fd.set("total", total || String(computedTotal));
     fd.set("energy", energy);
     if (paySrc) {
@@ -116,7 +118,7 @@ export function FuelLogForm({
           <input value={liters} onChange={(e) => setLiters(e.target.value)} inputMode="decimal" />
         </Field>
         <Field label={`ราคา/${unit}`}>
-          <input value={pricePerL} onChange={(e) => setPricePerL(e.target.value)} inputMode="decimal" />
+          <input value={pricePerL} onChange={(e) => setPricePerL(e.target.value)} inputMode="decimal" placeholder={derivedPrice != null ? String(derivedPrice) : undefined} />
         </Field>
       </FieldGrid>
       <Field label="ยอดรวม (บาท)">

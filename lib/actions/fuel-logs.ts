@@ -25,7 +25,7 @@ export async function createFuelLog(vehicleId: string, formData: FormData): Prom
   const liters = parseFloat(String(formData.get("liters") ?? "").replace(/,/g, "")) || undefined;
   const pricePerL = parseFloat(String(formData.get("pricePerL") ?? "").replace(/,/g, "")) || undefined;
   const resolvedLiters = liters || (pricePerL ? total / pricePerL : undefined);
-  const resolvedPricePerL = pricePerL || (resolvedLiters ? total / resolvedLiters : undefined);
+  const resolvedPricePerL = pricePerL || (resolvedLiters ? Math.round((total / resolvedLiters) * 100) / 100 : undefined);
 
   const parsed = fuelSchema.safeParse({
     date: formData.get("date"),
