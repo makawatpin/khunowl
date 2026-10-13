@@ -14,9 +14,15 @@ export function svcIcon(category: string | null | undefined): IconName {
   return SVC_CATEGORIES.find(([c]) => c === category)?.[1] ?? "wrench";
 }
 
-export function nextServiceKm(mileage: number, serviceEveryKm: number): number {
+/**
+ * Next service odometer. With `firstServiceKm` the schedule is first, first+every, first+2·every…
+ * (5,000 then every 10,000 → 5k, 15k, 25k); without it, plain multiples of `every`.
+ */
+export function nextServiceKm(mileage: number, serviceEveryKm: number, firstServiceKm?: number | null): number {
   const every = serviceEveryKm || 5000;
-  return Math.ceil((mileage + 1) / every) * every;
+  if (!firstServiceKm || firstServiceKm <= 0) return Math.ceil((mileage + 1) / every) * every;
+  if (mileage < firstServiceKm) return firstServiceKm;
+  return firstServiceKm + Math.ceil((mileage + 1 - firstServiceKm) / every) * every;
 }
 
 /** 'fuel' = litres / ฿ per L, 'ev' = kWh / ฿ per kWh (stored in the same liters / price_per_l columns). */

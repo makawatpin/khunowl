@@ -23,6 +23,7 @@ export interface VehicleFormInitial {
   color: string | null;
   mileage: number;
   serviceEveryKm: number;
+  serviceFirstKm: number | null;
   insuranceCompany: string | null;
   insurancePolicy: string | null;
   insuranceExpiry: string | null;
@@ -53,6 +54,7 @@ export function VehicleForm({
   const [color, setColor] = useState(initial?.color ?? "");
   const [mileage, setMileage] = useState(initial ? String(initial.mileage) : "");
   const [serviceEveryKm, setServiceEveryKm] = useState(initial ? String(initial.serviceEveryKm) : "5000");
+  const [serviceFirstKm, setServiceFirstKm] = useState(initial?.serviceFirstKm != null ? String(initial.serviceFirstKm) : "");
   const [insuranceCompany, setInsuranceCompany] = useState(initial?.insuranceCompany ?? "");
   const [insurancePolicy, setInsurancePolicy] = useState(initial?.insurancePolicy ?? "");
   const [insuranceExpiry, setInsuranceExpiry] = useState(initial?.insuranceExpiry ?? "");
@@ -77,6 +79,7 @@ export function VehicleForm({
     fd.set("color", color);
     fd.set("mileage", mileage || "0");
     fd.set("serviceEveryKm", serviceEveryKm || "5000");
+    fd.set("serviceFirstKm", serviceFirstKm);
     fd.set("insuranceCompany", insuranceCompany);
     fd.set("insurancePolicy", insurancePolicy);
     fd.set("insuranceExpiry", insuranceExpiry);
@@ -172,7 +175,10 @@ export function VehicleForm({
         <Field label="เลขไมล์ปัจจุบัน (กม.)">
           <input value={mileage} onChange={(e) => setMileage(e.target.value)} inputMode="numeric" />
         </Field>
-        <Field label="เช็กระยะทุก (กม.)">
+        <Field label="เช็กระยะครั้งแรก (กม.)">
+          <input value={serviceFirstKm} onChange={(e) => setServiceFirstKm(e.target.value)} inputMode="numeric" placeholder="ไม่บังคับ เช่น 5000" />
+        </Field>
+        <Field label="จากนั้นเช็กทุก (กม.)">
           <input value={serviceEveryKm} onChange={(e) => setServiceEveryKm(e.target.value)} inputMode="numeric" />
         </Field>
         <Field label="เลขตัวถัง (VIN)">

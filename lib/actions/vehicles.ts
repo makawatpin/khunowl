@@ -24,6 +24,7 @@ const vehicleSchema = z.object({
   color: zEmptyToUndefined,
   mileage: z.coerce.number().nonnegative(),
   serviceEveryKm: z.coerce.number().int().positive(),
+  serviceFirstKm: z.coerce.number().int().positive().optional(),
   insuranceCompany: zEmptyToUndefined,
   insurancePolicy: zEmptyToUndefined,
   insuranceExpiry: zEmptyToUndefined,
@@ -45,6 +46,7 @@ function parseVehicle(formData: FormData) {
     color: formData.get("color"),
     mileage: formData.get("mileage") || "0",
     serviceEveryKm: formData.get("serviceEveryKm") || "5000",
+    serviceFirstKm: formData.get("serviceFirstKm") || undefined,
     insuranceCompany: formData.get("insuranceCompany"),
     insurancePolicy: formData.get("insurancePolicy"),
     insuranceExpiry: formData.get("insuranceExpiry"),
@@ -59,7 +61,7 @@ function parseVehicle(formData: FormData) {
 function toRow(d: z.infer<typeof vehicleSchema>) {
   return {
     kind: d.kind, brand: d.brand, model: d.model, year: d.year ?? null, plate: d.plate, vin: d.vin, color: d.color,
-    mileage: d.mileage, service_every_km: d.serviceEveryKm,
+    mileage: d.mileage, service_every_km: d.serviceEveryKm, service_first_km: d.serviceFirstKm ?? null,
     insurance_company: d.insuranceCompany, insurance_policy: d.insurancePolicy, insurance_expiry: d.insuranceExpiry,
     insurance_premium: d.insurancePremium ?? null,
     prb_expiry: d.prbExpiry, prb_premium: d.prbPremium ?? null,

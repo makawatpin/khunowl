@@ -37,6 +37,7 @@ export interface NotificationsInput {
     taxExpiry: string | null;
     mileage: number;
     serviceEveryKm: number;
+    serviceFirstKm?: number | null;
   }[];
   documents: { id: string; name: string; type: string | null; expiry: string | null }[];
   homeTasks: { id: string; name: string; nextDue: string }[];
@@ -74,7 +75,7 @@ export function notifications(input: NotificationsInput): NotificationItem[] {
     if (v.taxExpiry && daysTo(v.taxExpiry, todayISO) <= 45) {
       add({ key: `vtax:${v.id}`, group: "ใกล้หมดอายุ", tone: "amber", title: `ภาษีรถ ${v.model ?? ""}`.trim(), date: v.taxExpiry });
     }
-    const target = nextServiceKm(v.mileage, v.serviceEveryKm);
+    const target = nextServiceKm(v.mileage, v.serviceEveryKm, v.serviceFirstKm);
     const left = target - v.mileage;
     if (left <= 1000) {
       add({

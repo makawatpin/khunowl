@@ -15,7 +15,7 @@ export async function getNotificationItems(supabase: SupabaseClient<Database>, u
   let billsQ = supabase.from("bills").select("id, name, next_due");
   let cardsQ = supabase.from("card_usage").select("id, name, used, due_date").eq("archived", false);
   let assetsQ = supabase.from("assets").select("id, name, warranty_until").eq("sold", false);
-  let vehiclesQ = supabase.from("vehicles").select("id, model, insurance_expiry, tax_expiry, mileage, service_every_km");
+  let vehiclesQ = supabase.from("vehicles").select("id, model, insurance_expiry, tax_expiry, mileage, service_every_km, service_first_km");
   let docsQ = supabase.from("documents").select("id, name, type, expiry");
   let homeTasksQ = supabase.from("home_tasks").select("id, name, next_due");
   let tasksQ = supabase.from("tasks").select("id, name, due, done");
@@ -44,7 +44,7 @@ export async function getNotificationItems(supabase: SupabaseClient<Database>, u
     assets: (assetRows ?? []).map((a) => ({ id: a.id, name: a.name, warrantyUntil: a.warranty_until })),
     vehicles: (vehicleRows ?? []).map((v) => ({
       id: v.id, model: v.model, insuranceExpiry: v.insurance_expiry, taxExpiry: v.tax_expiry,
-      mileage: v.mileage, serviceEveryKm: v.service_every_km,
+      mileage: v.mileage, serviceEveryKm: v.service_every_km, serviceFirstKm: v.service_first_km,
     })),
     documents: (docRows ?? []).map((d) => ({ id: d.id, name: d.name, type: d.type, expiry: d.expiry })),
     homeTasks: (homeTaskRows ?? []).map((h) => ({ id: h.id, name: h.name, nextDue: h.next_due })),

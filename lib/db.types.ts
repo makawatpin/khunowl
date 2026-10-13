@@ -1312,6 +1312,7 @@ export type Database = {
           price: number | null
           purchased_on: string | null
           service_every_km: number
+          service_first_km: number | null
           tax_expiry: string | null
           tax_premium: number | null
           updated_at: string
@@ -1337,6 +1338,7 @@ export type Database = {
           price?: number | null
           purchased_on?: string | null
           service_every_km?: number
+          service_first_km?: number | null
           tax_expiry?: string | null
           tax_premium?: number | null
           updated_at?: string
@@ -1362,6 +1364,7 @@ export type Database = {
           price?: number | null
           purchased_on?: string | null
           service_every_km?: number
+          service_first_km?: number | null
           tax_expiry?: string | null
           tax_premium?: number | null
           updated_at?: string

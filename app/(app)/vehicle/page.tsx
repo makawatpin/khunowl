@@ -18,7 +18,7 @@ export default async function VehiclePage() {
     { data: cardRows },
   ] = await Promise.all([
     supabase.from("vehicles").select(
-      "id, kind, brand, model, year, plate, vin, color, mileage, service_every_km, insurance_company, insurance_policy, insurance_expiry, insurance_premium, prb_expiry, prb_premium, tax_expiry, tax_premium",
+      "id, kind, brand, model, year, plate, vin, color, mileage, service_every_km, service_first_km, insurance_company, insurance_policy, insurance_expiry, insurance_premium, prb_expiry, prb_premium, tax_expiry, tax_premium",
     ),
     supabase.from("vehicle_services").select("id, vehicle_id, category, name, date, mileage, cost, provider, note, items, receipt_path"),
     supabase.from("fuel_logs").select("id, vehicle_id, date, mileage, liters, price_per_l, total, energy"),
@@ -29,7 +29,7 @@ export default async function VehiclePage() {
 
   const vehicles: VehicleFormInitial[] = (vehicleRows ?? []).map((v) => ({
     id: v.id, kind: v.kind, brand: v.brand, model: v.model, year: v.year, plate: v.plate, vin: v.vin, color: v.color,
-    mileage: v.mileage, serviceEveryKm: v.service_every_km,
+    mileage: v.mileage, serviceEveryKm: v.service_every_km, serviceFirstKm: v.service_first_km,
     insuranceCompany: v.insurance_company, insurancePolicy: v.insurance_policy, insuranceExpiry: v.insurance_expiry, insurancePremium: v.insurance_premium,
     prbExpiry: v.prb_expiry, prbPremium: v.prb_premium, taxExpiry: v.tax_expiry, taxPremium: v.tax_premium,
   }));

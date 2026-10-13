@@ -8,6 +8,17 @@ describe("nextServiceKm", () => {
   it("defaults to 5000km when serviceEveryKm is falsy", () => {
     expect(nextServiceKm(4999, 0)).toBe(5000);
   });
+  it("uses the first service milestone before the regular cycle (5k then every 10k)", () => {
+    expect(nextServiceKm(0, 10000, 5000)).toBe(5000);
+    expect(nextServiceKm(4999, 10000, 5000)).toBe(5000);
+    expect(nextServiceKm(5000, 10000, 5000)).toBe(15000);
+    expect(nextServiceKm(14999, 10000, 5000)).toBe(15000);
+    expect(nextServiceKm(15000, 10000, 5000)).toBe(25000);
+  });
+  it("ignores a null/zero first milestone", () => {
+    expect(nextServiceKm(14450, 5000, null)).toBe(15000);
+    expect(nextServiceKm(14450, 5000, 0)).toBe(15000);
+  });
 });
 
 describe("fuelStats", () => {

@@ -101,7 +101,7 @@ export function VehicleClient({
   const hasEv = energyBlocks.some((b) => b.key === "ev");
   // Hero/overview show every energy type with data; an empty vehicle still shows the petrol placeholder.
   const effBlocks = energyBlocks.length ? energyBlocks : [{ key: "fuel" as const, rows: [], st: fuelStats([], monthKey), kmUnit: "กม./ลิตร", kmUnitShort: "กม./ล.", monthlyLabel: "ค่าน้ำมันเดือนนี้", needMore: "เติมน้ำมัน 2 ครั้งเพื่อคำนวณ" }];
-  const target = nextServiceKm(v.mileage, v.serviceEveryKm);
+  const target = nextServiceKm(v.mileage, v.serviceEveryKm, v.serviceFirstKm);
   const kmLeft = target - v.mileage;
   const svcCost = (s: VehicleServiceFormInitial) => s.cost;
   const svcTotal = svc.reduce((s, x) => s + svcCost(x), 0);
