@@ -181,7 +181,7 @@ export function VehicleClient({
       <div className="actbar">
         <button className="btn" onClick={() => setFuelForm(true)}>
           <Icon name={hasEv && energyBlocks.length === 1 ? "bolt" : "fuel"} size={15} />
-          {hasEv && energyBlocks.length === 1 ? "ชาร์จไฟ" : hasEv ? "เติมน้ำมัน / ชาร์จไฟ" : "เติมน้ำมัน"}
+          {hasEv && energyBlocks.length === 1 ? "ชาร์จไฟ" : "เติมน้ำมัน / ชาร์จไฟ"}
         </button>
         <button className="btn" onClick={() => setSvcForm("new")}>
           <Icon name="wrench" size={15} />
@@ -434,8 +434,8 @@ export function VehicleClient({
           </>
         ) : (
           <div className="card list">
-            <div className="empty">ยังไม่มีประวัติเติมน้ำมันของรถคันนี้</div>
-            <button className="btn btn-primary" style={{ margin: "0 16px 16px" }} onClick={() => setFuelForm(true)}>บันทึกเติมน้ำมัน</button>
+            <div className="empty">ยังไม่มีประวัติเติมน้ำมัน / ชาร์จไฟของรถคันนี้</div>
+            <button className="btn btn-primary" style={{ margin: "0 16px 16px" }} onClick={() => setFuelForm(true)}>บันทึกเติมน้ำมัน / ชาร์จไฟ</button>
           </div>
         ))}
 

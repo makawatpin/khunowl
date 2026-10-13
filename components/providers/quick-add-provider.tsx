@@ -26,7 +26,7 @@ const KIND_META: { kind: QuickAddKind; label: string; icon: IconName }[] = [
   { kind: "bill", label: "บิล / ค่าใช้จ่ายประจำ", icon: "clock" },
   { kind: "sub", label: "สมาชิกรายเดือน", icon: "clock" },
   { kind: "asset", label: "ซื้อของ / ทรัพย์สิน", icon: "box" },
-  { kind: "fuel", label: "เติมน้ำมัน", icon: "fuel" },
+  { kind: "fuel", label: "เติมน้ำมัน / ชาร์จไฟ", icon: "fuel" },
   { kind: "service", label: "ซ่อมรถ", icon: "wrench" },
   { kind: "trip", label: "ทริปใหม่ (หารกับเพื่อน)", icon: "trip" },
   { kind: "doc", label: "เอกสาร", icon: "doc" },

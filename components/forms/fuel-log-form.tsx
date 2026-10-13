@@ -52,7 +52,7 @@ export function FuelLogForm({
 
   if (!vehicle) {
     return (
-      <FormModal title="เติมน้ำมัน" onClose={onClose} onSave={onClose} valid={false}>
+      <FormModal title="เติมน้ำมัน / ชาร์จไฟ" onClose={onClose} onSave={onClose} valid={false}>
         <div className="empty">ยังไม่มีรถ — เพิ่มรถในหน้ารถยนต์ก่อน</div>
       </FormModal>
     );
