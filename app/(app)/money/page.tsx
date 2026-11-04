@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { todayISOInBangkok } from "@/lib/dates/today";
+import { addMonths } from "@/lib/domain/dates";
 import { AccountList, type AccountListItem } from "@/components/money/account-list";
 import { CardList, type CardListItem } from "@/components/money/card-list";
 import { TransactionList } from "@/components/money/transaction-list";
@@ -17,6 +18,9 @@ export default async function MoneyPage() {
   const supabase = await createClient();
   const todayISO = todayISOInBangkok();
   const monthKey = todayISO.slice(0, 7);
+  // Exclusive upper bound: `${monthKey}-31` is not a valid date in 30-day months / February and Postgres rejects it.
+  const monthStart = `${monthKey}-01`;
+  const nextMonthStart = addMonths(monthStart, 1);
 
   const [{ data: accountRows }, { data: cardRows }, { data: txnRows }, { data: monthRows }, { data: budgetRows }] = await Promise.all([
     supabase.from("account_balances").select("id, name, bank, type, last4, balance, pinned").eq("archived", false),
@@ -24,7 +28,7 @@ export default async function MoneyPage() {
     // First page of the list (older pages load on demand via listTransactionsPage).
     supabase.from("transactions").select(TXN_LIST_COLUMNS).order("date", { ascending: false }).order("id", { ascending: false }).limit(TXN_PAGE_SIZE),
     // Month totals/budgets get their own query, independent of how much of the list is loaded.
-    supabase.from("transactions").select("type, amount, category").gte("date", `${monthKey}-01`).lte("date", `${monthKey}-31`).neq("type", "transfer").limit(5000),
+    supabase.from("transactions").select("type, amount, category").gte("date", monthStart).lt("date", nextMonthStart).neq("type", "transfer").limit(5000),
     supabase.from("budgets").select("category, monthly_limit"),
   ]);
 
