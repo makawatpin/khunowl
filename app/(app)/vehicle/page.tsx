@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { signedUrl } from "@/lib/supabase/storage";
+import { signedUrls } from "@/lib/supabase/storage";
 import { todayISOInBangkok } from "@/lib/dates/today";
 import { VehicleClient, type FuelLogItem } from "@/components/vehicle/vehicle-client";
 import type { VehicleFormInitial } from "@/components/forms/vehicle-form";
@@ -34,13 +34,15 @@ export default async function VehiclePage() {
     prbExpiry: v.prb_expiry, prbPremium: v.prb_premium, taxExpiry: v.tax_expiry, taxPremium: v.tax_premium,
   }));
 
+  // One batched signing call for every receipt instead of one sequential HTTP call per service row.
+  const receiptUrls = await signedUrls(supabase, (serviceRows ?? []).map((s) => s.receipt_path));
   const servicesByVehicle: Record<string, VehicleServiceFormInitial[]> = {};
   for (const s of serviceRows ?? []) {
     const list = servicesByVehicle[s.vehicle_id] ?? (servicesByVehicle[s.vehicle_id] = []);
     list.push({
       id: s.id, vehicleId: s.vehicle_id, category: s.category, name: s.name, date: s.date, mileage: s.mileage, cost: s.cost,
       provider: s.provider, note: s.note, items: (s.items as { name: string; price: number }[]) ?? [],
-      receiptUrl: await signedUrl(supabase, s.receipt_path),
+      receiptUrl: (s.receipt_path && receiptUrls.get(s.receipt_path)) || null,
     });
   }
 

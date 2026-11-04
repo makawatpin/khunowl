@@ -8,6 +8,7 @@ import { parseSlip, slipIsDuplicate } from "@/lib/domain/slips";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "@/lib/domain/categories";
 import { getSlipDedupeContext, importSlipTransactions, type SlipDedupeTxn } from "@/lib/actions/slip-import";
 import { useToast } from "@/components/providers/toast-provider";
+import { todayISOInBangkok } from "@/lib/dates/today";
 
 // Tesseract.js loads from a CDN at runtime (not an npm dependency) — same approach as the
 // prototype (design-reference/lifeos-slips.jsx): its WASM/traineddata payload is ~10-15MB and
@@ -159,7 +160,7 @@ export function SlipImportForm({ onClose }: { onClose: () => void }) {
       return;
     }
 
-    const todayISO = new Date().toISOString().slice(0, 10);
+    const todayISO = todayISOInBangkok();
     for (const x of list) {
       update(x.id, { status: "read", progress: 0 });
       try {

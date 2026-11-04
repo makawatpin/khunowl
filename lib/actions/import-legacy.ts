@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { todayISOInBangkok } from "@/lib/dates/today";
 import { tAmt, tShares, type TripExpense } from "@/lib/domain/trips";
 import {
   computeOpeningBalance, computeOpeningUsed, legacyCycleMonths, mapLegacyAccountType,
@@ -200,7 +201,7 @@ export async function importLegacy(json: unknown): Promise<ImportLegacyResult> {
   for (const t of d.tasks ?? []) {
     const { error } = await supabase.from("tasks").insert({
       name: t.name ?? "งาน", due: t.due || null, priority: mapLegacyTaskPriority(t.pri), related: t.rel ?? null,
-      done: !!t.done, done_at: t.done ? (t.doneAt ?? new Date().toISOString().slice(0, 10)) : null,
+      done: !!t.done, done_at: t.done ? (t.doneAt ?? todayISOInBangkok()) : null,
     });
     if (error) { bump(result, "skipped", "tasks"); continue; }
     bump(result, "imported", "tasks");
@@ -304,7 +305,7 @@ export async function importLegacy(json: unknown): Promise<ImportLegacyResult> {
       const to = memberIdMap.get(s.to);
       if (!from || !to) { bump(result, "skipped", "tripSettlements"); continue; }
       const { error } = await supabase.from("trip_settlements").insert({
-        trip_id: tripRow.id, from_member: from, to_member: to, amount: +s.amt || 0, date: s.date || new Date().toISOString().slice(0, 10),
+        trip_id: tripRow.id, from_member: from, to_member: to, amount: +s.amt || 0, date: s.date || todayISOInBangkok(),
         txn_id: s.txn ? (txnIdMap.get(s.txn) ?? null) : null,
       });
       if (error) { bump(result, "skipped", "tripSettlements"); continue; }
